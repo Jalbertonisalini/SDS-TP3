@@ -1,0 +1,11 @@
+# Dependencias de terceros de la capa de orquestacion.
+# El resto de los imports del directorio (argparse, csv, re, shutil, subprocess,
+# sys, time, pathlib) son de la biblioteca estandar y no van aca.
+
+pandas          # Lectura de los CSV del motor: run.py y todos los scripts de plot/
+matplotlib      # Figuras y animacion: plot/
+numpy           # Interpolacion a grilla uniforme y ajuste del DCM:
+                #   plot/fu_vs_tiempo.py, plot/dcm_vs_tiempo.py
+imageio-ffmpeg  # Trae el binario de ffmpeg que matplotlib usa para escribir los
+                #   MP4, para no depender de uno instalado en el sistema:
+                #   plot/animacion.py

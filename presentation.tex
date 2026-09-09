@@ -1,0 +1,292 @@
+\documentclass[aspectratio=169]{beamer}
+
+% --- Toggle para version impresa (PDF) vs presentacion en vivo ---
+% Cambiar \pptprinttrue por \pptprintfalse para version con animaciones embebidas
+\newif\ifpptprint
+\pptprinttrue
+
+% --- Tema: solo colores, headline y footer custom ---
+\usecolortheme{dolphin}
+\setbeamertemplate{navigation symbols}{}
+% --- Footline: solo el numero de diapositiva (guia 1.2) ---
+% Las condiciones de simulacion NO van aca: estan una sola vez, en
+% "Parametros del estudio". En cada diapositiva de figura solo se repite el
+% parametro libre, a la derecha del titulo (ver \libre).
+\setbeamertemplate{footline}{%
+  \hbox to\paperwidth{\hfill
+    \small\color{black!65}\insertframenumber\,/\,\inserttotalframenumber
+    \hskip1.4em}%
+  \vskip6pt
+}
+
+% --- Paquetes ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{hyperref}
+
+% ============================================================
+% Headline: grupos de puntos por seccion / estudio
+% ============================================================
+% Un punto por diapositiva. Los rangos de abajo deben coincidir con los
+% numeros de frame reales: si se agregan o quitan diapositivas hay que
+% actualizar los pares (primero,ultimo) de cada \dgrp.
+\newcommand{\dgrp}[3]{% #1 = primer frame, #2 = ultimo frame, #3 = etiqueta
+  \pgfmathtruncatemacro{\nd}{#2-#1+1}%
+  \foreach \fr [count=\k from 0] in {#1,...,#2} {%
+    \pgfmathsetmacro{\x}{\bx + \k*\dgap}%
+    \ifnum\fr=\cf
+      \fill[white] (\x,0) circle(\rad);
+      \draw[white,line width=0.8pt] (\x,0) circle(\rad+1.2pt);
+    \else\ifnum\fr<\cf
+      \fill[white] (\x,0) circle(\rad);
+    \else
+      \draw[white,line width=0.4pt] (\x,0) circle(\rad);
+    \fi\fi
+  }%
+  \node[white,font=\tiny\bfseries]
+    at ({\bx+(\nd-1)*\dgap/2},-0.34) {#3};%
+  \pgfmathsetmacro{\bxtmp}{\bx + (\nd-1)*\dgap + \sgap}%
+  \let\bx\bxtmp
+}
+
+\setbeamertemplate{headline}{%
+  \begin{beamercolorbox}[ht=2.9em,dp=0.1em,leftskip=0pt,rightskip=0pt]{section in head/foot}%
+    \centering
+    \begin{tikzpicture}
+      \pgfmathtruncatemacro{\cf}{\insertframenumber}
+      \def\rad{1.5pt}
+      \def\dgap{0.19}
+      \def\sgap{0.55}
+      \pgfmathsetmacro{\bx}{0}
+
+      % OJO: estos rangos estan hardcodeados. Si se agregan o quitan
+      % diapositivas hay que actualizarlos.
+      \dgrp{3}{4}{Intro.}
+      \dgrp{5}{6}{Impl.}
+      \dgrp{7}{8}{Sim.}
+      \dgrp{9}{13}{Resultados}
+      \dgrp{14}{15}{Conc.}
+    \end{tikzpicture}
+  \end{beamercolorbox}
+}
+
+% ============================================================
+% Comandos de notacion y de armado de diapositivas
+% ============================================================
+\newcommand{\vv}[1]{\mathbf{#1}}      % vectores en negrita y sin italica
+\newcommand{\uu}[1]{\mathrm{#1}}       % unidades en romano
+
+% Diapositiva separadora de seccion (solo el titulo, sin numerar la seccion)
+\newcommand{\seccion}[1]{%
+  \begin{frame}
+    \vfill
+    \begin{center}{\Huge\bfseries #1}\end{center}
+    \vfill
+  \end{frame}
+}
+
+% Parametro libre de la diapositiva: va a la derecha del titulo, en negro.
+% Es lo unico que se repite por diapositiva; el resto de las condiciones esta
+% una sola vez en "Parametros del estudio".
+% El titulo de beamer va en \raggedright, o sea \rightskip = 0pt plus 1fil.
+% Un \hfill comun (1fil) se reparte el sobrante a medias con ese rightskip y el
+% parametro queda a media asta; con 1filll gana y se pega al margen derecho.
+\newcommand{\libre}[1]{\hskip 0pt plus 1filll\relax{\small\normalfont\color{black}#1}}
+
+% Figura unica, al maximo tamano posible.
+\newcommand{\figuno}[1]{%
+  \vspace{-0.6em}
+  \begin{center}
+    \includegraphics[width=\textwidth,height=0.84\textheight,keepaspectratio]{#1}
+  \end{center}
+}
+
+% Dos figuras lado a lado, cada una con su titulo justo debajo. El par se centra
+% en \paperwidth (no en \textwidth) para ganar ancho; el \hss de los costados
+% absorbe el desborde sin que LaTeX avise por overfull.
+\newcommand{\figdos}[4]{% #1 = izq, #2 = titulo izq, #3 = der, #4 = titulo der
+  \begin{center}
+    \hbox to \textwidth{\hss
+      \begin{minipage}[t]{0.492\paperwidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio,
+          trim=15 10 45 25,clip]{#1}
+        \par\vspace{0.3em}{\small #2}
+      \end{minipage}%
+      \hspace{0.008\paperwidth}%
+      \begin{minipage}[t]{0.492\paperwidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio,
+          trim=15 10 45 25,clip]{#3}
+        \par\vspace{0.3em}{\small #4}
+      \end{minipage}%
+    \hss}
+  \end{center}
+}
+
+% Dos animaciones por diapositiva. Cada columna deja el parametro arriba,
+% el video centrado y el enlace explicito debajo (guia 2.4.8).
+\newcommand{\animdos}[4]{% #1 = parametro izq, #2 = link izq,
+                         % #3 = parametro der, #4 = link der
+  \vspace{-0.3em}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.485\textwidth}
+      \centering
+      {\large\bfseries #1}\par\vspace{0.5em}
+      \fbox{\parbox[c][0.49\textheight][c]{0.92\linewidth}{%
+        \centering\color{gray}
+        \ifpptprint Fotograma del video\else Animación embebida\fi}}
+      \par\vspace{0.5em}
+      {\scriptsize Video: \href{#2}{#2}}
+
+    \column{0.485\textwidth}
+      \centering
+      {\large\bfseries #3}\par\vspace{0.5em}
+      \fbox{\parbox[c][0.49\textheight][c]{0.92\linewidth}{%
+        \centering\color{gray}
+        \ifpptprint Fotograma del video\else Animación embebida\fi}}
+      \par\vspace{0.5em}
+      {\scriptsize Video: \href{#4}{#4}}
+  \end{columns}
+}
+
+% --- Metadatos ---
+\title{Billar-Metegol}
+\subtitle{Simulación dirigida por eventos y búsqueda de la configuración óptima}
+\author{\texorpdfstring{%
+  Juan Bautista Albertoni Salini --- 64189\\[0.25em]
+  Santiago Devesa --- 64223\\[0.25em]
+  Junior Rambau --- 64461%
+}{Juan Bautista Albertoni Salini 64189; Santiago Devesa 64223; Junior Rambau 64461}}
+\institute{(72.25) Simulación de Sistemas --- ITBA}
+\date{Septiembre 2026}
+
+% ============================================================
+\begin{document}
+
+% --- Frame 1: Titulo ---
+\begin{frame}
+  \titlepage
+\end{frame}
+
+% --- Frame 2: Indice ---
+\begin{frame}{Contenidos}
+  \tableofcontents
+\end{frame}
+
+\seccion{Introducción}
+
+\section{Introducción}
+
+\begin{frame}{El sistema}
+  \begin{itemize}
+    \setlength{\itemsep}{1em}
+    \item Mesa rectangular de $L = 1.20$ m por $W = 0.68$ m, con un arco de
+      $d = 0.20$ m en el centro de cada pared corta.
+    \item $N$ partículas en movimiento rectilíneo uniforme entre colisiones
+      elásticas, con obstáculos circulares fijos de masa infinita.
+    \item Una partícula fresca se vuelve usada al tocar por primera vez un arco.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Objetivo}
+  \begin{itemize}
+    \setlength{\itemsep}{1em}
+    \item $F_u(t) = N_g(t)/N$: fracción de partículas usadas.
+    \item $t_{90}$: instante en que $F_u$ alcanza $0.9$.
+    \item Encontrar y justificar la configuración de obstáculos que minimiza
+      $\langle t_{90}\rangle$.
+  \end{itemize}
+\end{frame}
+
+\seccion{Implementación}
+
+\section{Implementación}
+
+\begin{frame}{Motor dirigido por eventos}
+  % TODO: diagrama del ciclo predecir-avanzar-resolver-reagendar.
+\end{frame}
+
+\begin{frame}{Ecuaciones}
+  \Large
+  % TODO: tiempo de colisión entre discos e impulso elástico.
+\end{frame}
+
+\seccion{Simulaciones}
+
+\section{Simulaciones}
+
+\begin{frame}{Parámetros del estudio}
+  % Las condiciones de simulación se enuncian UNA sola vez, acá. En las
+  % diapositivas de figuras solo se repite el parámetro libre, con \libre.
+  \begin{center}
+    \begin{tabular}{@{}lc@{}}
+      \toprule
+      Parámetro & Valor \\
+      \midrule
+      $N$ & 100 \\
+      $v_0$ & 1 m/s \\
+      $r$ & 0.0175 m \\
+      $m$ & 0.025 kg \\
+      $L \times W$ & $1.20 \times 0.68$ m \\
+      $d$ & 0.20 m \\
+      $t_{max}$ & 100 s \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Animaciones}
+  \animdos{Mesa vacía}{https://youtu.be/TODO}{Configuración óptima}{https://youtu.be/TODO}
+\end{frame}
+
+\seccion{Resultados}
+
+\section{Resultados}
+
+\begin{frame}{Tiempo de ejecución\libre{Sin obstáculos, $t_f = 30$ s}}
+  \figuno{entrega/1.1/tiempo_ejecucion_vs_n.png}
+\end{frame}
+
+\begin{frame}{Fracción de usadas\libre{$N = 100$}}
+  \figuno{entrega/1.2/fu_vs_tiempo.png}
+\end{frame}
+
+\begin{frame}{Exploración de configuraciones\libre{$N = 100$, 5 realizaciones}}
+  \figuno{entrega/1.2/t90_vs_configuracion.png}
+\end{frame}
+
+\begin{frame}{Coeficiente de difusión\libre{Una realización}}
+  \figdos{entrega/1.3/dcm_vacia.png}{Mesa vacía}
+         {entrega/1.3/dcm_embudo.png}{Configuración con obstáculos}
+\end{frame}
+
+\begin{frame}{Configuración elegida\libre{Competencia}}
+  % TODO: esquema de la configuración final y su $\langle t_{90}\rangle$.
+\end{frame}
+
+\seccion{Conclusiones}
+
+\section{Conclusiones}
+
+\begin{frame}{Conclusiones}
+  \begin{itemize}
+    \setlength{\itemsep}{1em}
+    \item % TODO
+    \item % TODO
+    \item % TODO
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \vfill
+  \begin{center}{\Huge\bfseries ¡Gracias!}\end{center}
+  \vfill
+\end{frame}
+
+\end{document}

@@ -67,3 +67,28 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Python (capa de orquestacion)
+.venv/
+__pycache__/
+*.pyc
+python/output/
+
+# Artefactos de LaTeX
+*.aux
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+
+# Entregables generados por empaquetar.sh
+SdS_TP3_*_Codigo.zip
+
+# macOS
+.DS_Store

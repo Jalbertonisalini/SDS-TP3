@@ -1,0 +1,2 @@
+# Mesa vacia: linea de base contra la que se comparan todas las configuraciones.
+# Formato: una linea por obstaculo con "x_k y_k R_k" en metros.

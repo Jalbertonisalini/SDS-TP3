@@ -1,0 +1,6 @@
+# Arreglo tipo embudo: cuatro obstaculos que encauzan las particulas hacia los arcos.
+# Formato: una linea por obstaculo con "x_k y_k R_k" en metros.
+0.40 0.14 0.09
+0.40 0.54 0.09
+0.80 0.14 0.09
+0.80 0.54 0.09

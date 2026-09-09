@@ -1,0 +1,3 @@
+# Un unico obstaculo grande en el centro de la mesa.
+# Formato: una linea por obstaculo con "x_k y_k R_k" en metros.
+0.60 0.34 0.12
