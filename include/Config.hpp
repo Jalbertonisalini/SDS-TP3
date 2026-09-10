@@ -5,6 +5,8 @@
 
 #include "Obstacle.hpp"
 
+enum class Placement { Random, Hexagonal };
+
 // Parametros de una corrida. Todos vienen de la CLI con default; el motor no
 // tiene ninguna constante que obligue a recompilar.
 struct Config {
@@ -31,6 +33,9 @@ struct Config {
     std::string obstaclesPath;   // Archivo de obstaculos; vacio = mesa vacia
     std::string outputPath = "salida.csv";     // Serie temporal compacta
     std::string trajectoryPath;  // Trayectoria completa; vacio = no se escribe
+
+    // Colocacion de particulas
+    Placement placement = Placement::Random;
 
     std::vector<Obstacle> obstacles;
 };

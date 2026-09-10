@@ -1,5 +1,6 @@
 #include "SimulationEngine.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -35,15 +36,21 @@ bool SimulationEngine::overlapsSomething(const Vec2& candidate) const {
 }
 
 void SimulationEngine::placeParticles() {
+    if (config_.placement == Placement::Hexagonal) {
+        placeParticlesHexagonal();
+    } else {
+        placeParticlesRandom();
+    }
+}
+
+void SimulationEngine::placeParticlesRandom() {
     std::mt19937_64 generator(config_.seed);
     const double r = config_.particleRadius;
     std::uniform_real_distribution<double> xDist(r, config_.length - r);
     std::uniform_real_distribution<double> yDist(r, config_.width - r);
     std::uniform_real_distribution<double> angleDist(0.0, 2.0 * M_PI);
 
-    // Cota generosa de intentos: si no alcanza, la configuracion de obstaculos
-    // no deja lugar para las N particulas y conviene fallar ruidosamente.
-    const int maxAttemptsPerParticle = 100000;
+    const int maxAttemptsPerParticle = 1000000;
 
     particles_.reserve(static_cast<std::size_t>(config_.particleCount));
     for (int i = 0; i < config_.particleCount; ++i) {
@@ -63,6 +70,50 @@ void SimulationEngine::placeParticles() {
         Particle particle;
         particle.position = candidate;
         particle.initialPosition = candidate;
+        particle.velocity = {config_.initialSpeed * std::cos(angle),
+                             config_.initialSpeed * std::sin(angle)};
+        particle.radius = r;
+        particle.mass = config_.particleMass;
+        particles_.push_back(particle);
+    }
+}
+
+void SimulationEngine::placeParticlesHexagonal() {
+    std::mt19937_64 generator(config_.seed);
+    const double r = config_.particleRadius;
+    std::uniform_real_distribution<double> angleDist(0.0, 2.0 * M_PI);
+
+    const double colSpacing = 2.0 * r;
+    const double rowSpacing = std::sqrt(3.0) * r;
+
+    // Generar posiciones en grilla hexagonal dentro del dominio.
+    std::vector<Vec2> grid;
+    int col = 0;
+    for (double x = r; x <= config_.length - r; x += colSpacing) {
+        int row = 0;
+        double xOffset = (col % 2 == 1) ? r : 0.0;
+        for (double y = r + xOffset; y <= config_.width - r; y += rowSpacing) {
+            grid.push_back({x, y});
+            ++row;
+        }
+        ++col;
+    }
+
+    if (static_cast<int>(grid.size()) < config_.particleCount) {
+        throw std::runtime_error(
+            "Grilla hexagonal: solo caben " + std::to_string(grid.size()) +
+            " particulas en el dominio, se pidieron " + std::to_string(config_.particleCount) + ".");
+    }
+
+    // Mezclar la grilla con la semilla para que el orden sea aleatorio.
+    std::shuffle(grid.begin(), grid.end(), generator);
+
+    particles_.reserve(static_cast<std::size_t>(config_.particleCount));
+    for (int i = 0; i < config_.particleCount; ++i) {
+        const double angle = angleDist(generator);
+        Particle particle;
+        particle.position = grid[static_cast<std::size_t>(i)];
+        particle.initialPosition = grid[static_cast<std::size_t>(i)];
         particle.velocity = {config_.initialSpeed * std::cos(angle),
                              config_.initialSpeed * std::sin(angle)};
         particle.radius = r;

@@ -15,6 +15,9 @@ RESULTADOS="../build/resultados"
 
 echo "== 1.1 =="
 "$PY" plot/tiempo_ejecucion_vs_n.py --salida "$ENTREGA/1.1/tiempo_ejecucion_vs_n.png"
+"$PY" plot/tiempo_ejecucion_vs_n_loglog.py --salida "$ENTREGA/1.1/tiempo_ejecucion_vs_n_loglog.png"
+"$PY" plot/tiempo_ejecucion_vs_n_hex.py --salida "$ENTREGA/1.1/tiempo_ejecucion_vs_n_hex.png"
+"$PY" plot/tiempo_ejecucion_vs_n_combined.py --salida "$ENTREGA/1.1/tiempo_ejecucion_vs_n_combined.png"
 
 echo "== 1.2 =="
 "$PY" plot/t90_vs_configuracion.py --salida "$ENTREGA/1.2/t90_vs_configuracion.png"

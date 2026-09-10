@@ -11,6 +11,7 @@ y se reanudan a mano muchas veces. Con --forzar se recorre igual.
 
 import argparse
 import csv
+import re
 import subprocess
 import sys
 
@@ -31,11 +32,15 @@ def parsear_resumen(salida):
 def correr(destino, argumentos, forzar):
     """Corre una simulacion si hace falta y devuelve su resumen.
 
-    Si el CSV ya existe y no se fuerza, el motor no se invoca y se devuelve None:
-    el resumen agregado se reconstruye igual desde el CSV existente.
+    Cada corrida exitosa deja un sidecar ``<csv>.resumen`` con las metricas que
+    imprime el motor por stdout. Asi, un barrido cortado a la mitad no pierde los
+    tiempos: el resumen_agregado se puede reconstruir desde los sidecars.
+    Solo se saltea un caso si ya existe tanto el CSV como su sidecar; si falta el
+    sidecar se re-corre para volver a capturar las metricas.
     """
-    if destino.exists() and not forzar:
-        print(f"  ya existe, se saltea: {destino.name}")
+    sidecar = destino.with_suffix(".resumen")
+    if destino.exists() and sidecar.exists() and not forzar:
+        print(f"  ya registrado, se saltea: {destino.name}")
         return None
 
     destino.parent.mkdir(parents=True, exist_ok=True)
@@ -45,15 +50,50 @@ def correr(destino, argumentos, forzar):
         print(f"  FALLO {destino.name}: {proceso.stderr.strip()}", file=sys.stderr)
         return None
 
+    sidecar.write_text(proceso.stdout)
     print(f"  ok: {destino.name}")
     return parsear_resumen(proceso.stdout)
 
 
-def escribir_resumen(directorio, columnas, claves, filas):
+def fila_desde_sidecar_partículas(sidecar):
+    """Reconstruye una fila del resumen de particulas desde un sidecar."""
+    m = re.fullmatch(r"N(\d+)_s(\d+)", sidecar.stem)
+    if not m:
+        return None
+    resumen = parsear_resumen(sidecar.read_text())
+    return {
+        "N": int(m.group(1)),
+        "semilla": int(m.group(2)),
+        "tiempo_ejecucion_s": resumen["tiempo_ejecucion_s"],
+        "eventos": int(resumen["eventos"]),
+        "goles": int(resumen["goles"]),
+        "t90": resumen["t90"],
+    }
+
+
+def fila_desde_sidecar_config(sidecar):
+    """Reconstruye una fila del resumen de configuraciones desde un sidecar."""
+    m = re.fullmatch(r"N(\d+)_s(\d+)", sidecar.stem)
+    if not m:
+        return None
+    resumen = parsear_resumen(sidecar.read_text())
+    return {
+        "configuracion": sidecar.parent.name,
+        "semilla": int(m.group(2)),
+        "tiempo_ejecucion_s": resumen["tiempo_ejecucion_s"],
+        "eventos": int(resumen["eventos"]),
+        "goles": int(resumen["goles"]),
+        "t90": resumen["t90"],
+    }
+
+
+def escribir_resumen(directorio, columnas, claves, filas, extraer_sidecar=None):
     """Guarda un CSV agregado con una fila por realizacion.
 
-    Se fusiona con lo que ya habia para que reanudar un barrido no genere filas
-    duplicadas. `claves` son las columnas que identifican univocamente una fila.
+    Se fusiona con lo que ya habia y con los sidecars ``*.resumen`` de la carpeta
+    (buscandolos tambien en subcarpetas), de modo que reanudar un barrido no
+    genere filas duplicadas y un barrido cortado siga produciendo resumenes
+    completos. `claves` son las columnas que identifican univocamente una fila.
     """
     destino = directorio / "resumen.csv"
     previas = []
@@ -62,9 +102,18 @@ def escribir_resumen(directorio, columnas, claves, filas):
             previas = list(csv.DictReader(archivo))
 
     por_clave = {tuple(fila[c] for c in claves): fila for fila in previas}
-    for fila in filas:
+
+    def agregar(fila):
         texto = {c: str(fila[c]) for c in columnas}
         por_clave[tuple(texto[c] for c in claves)] = texto
+
+    for fila in filas:
+        agregar(fila)
+    if extraer_sidecar is not None:
+        for sidecar in directorio.rglob("*.resumen"):
+            fila = extraer_sidecar(sidecar)
+            if fila is not None:
+                agregar(fila)
 
     with open(destino, "w", newline="") as archivo:
         escritor = csv.DictWriter(archivo, fieldnames=columnas)
@@ -76,7 +125,8 @@ def escribir_resumen(directorio, columnas, claves, filas):
 
 def barrido_particulas(args):
     """Punto 1.1: tiempo de ejecucion vs N, sin obstaculos, tf fijo."""
-    directorio = config.RESULTADOS / "particulas"
+    placement = getattr(args, "placement", "random")
+    directorio = config.RESULTADOS / ("particulas_hex" if placement == "hex" else "particulas")
     filas = []
 
     for n in args.valores:
@@ -89,6 +139,7 @@ def barrido_particulas(args):
                 "--seed", str(semilla),
                 # Muestreo grueso: el I/O no debe ensuciar el tiempo de ejecucion medido.
                 "--cada-eventos", str(args.cada_eventos),
+                "--placement", placement,
             ]
             resumen = correr(destino, argumentos, args.forzar)
             if resumen is None:
@@ -102,13 +153,13 @@ def barrido_particulas(args):
                 "t90": resumen["t90"],
             })
 
-    if filas:
-        escribir_resumen(
-            directorio,
-            ["N", "semilla", "tiempo_ejecucion_s", "eventos", "goles", "t90"],
-            ["N", "semilla"],
-            filas,
-        )
+    escribir_resumen(
+        directorio,
+        ["N", "semilla", "tiempo_ejecucion_s", "eventos", "goles", "t90"],
+        ["N", "semilla"],
+        filas,
+        extraer_sidecar=fila_desde_sidecar_partículas,
+    )
 
 
 def barrido_configs(args):
@@ -147,13 +198,13 @@ def barrido_configs(args):
                 "t90": resumen["t90"],
             })
 
-    if filas:
-        escribir_resumen(
-            directorio,
-            ["configuracion", "semilla", "tiempo_ejecucion_s", "eventos", "goles", "t90"],
-            ["configuracion", "semilla"],
-            filas,
-        )
+    escribir_resumen(
+        directorio,
+        ["configuracion", "semilla", "tiempo_ejecucion_s", "eventos", "goles", "t90"],
+        ["configuracion", "semilla"],
+        filas,
+        extraer_sidecar=fila_desde_sidecar_config,
+    )
 
 
 def construir_parser():
@@ -174,6 +225,8 @@ def construir_parser():
                                        help="Punto 1.1: barrido en N sin obstaculos")
     particulas.add_argument("--rango", nargs=3, type=int, metavar=("INI", "FIN", "PASO"),
                             help="Barrido regular en N")
+    particulas.add_argument("--placement", choices=["random", "hex"], default="random",
+                            help="Colocacion de particulas: random (default) o hex")
     particulas.set_defaults(funcion=barrido_particulas)
 
     configs = subparsers.add_parser("configs", parents=[comun],

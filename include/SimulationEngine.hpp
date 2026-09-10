@@ -30,6 +30,8 @@ public:
 
 private:
     void placeParticles();
+    void placeParticlesRandom();
+    void placeParticlesHexagonal();
     bool overlapsSomething(const Vec2& candidate) const;
 
     // Prediccion de colisiones. Devuelven infinito si la colision no ocurre.

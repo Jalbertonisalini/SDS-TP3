@@ -18,7 +18,10 @@ fi
 CONFIGS="vacia central_grande embudo"
 
 echo "== 1.1: tiempo de ejecucion vs N (sin obstaculos, 10 realizaciones) =="
-"$PY" run.py particulas --rango 50 300 50 --realizaciones 10 --cada-eventos 100000
+"$PY" run.py particulas --rango 50 500 25 --realizaciones 10 --cada-eventos 100000
+
+echo "== 1.1 hex: tiempo de ejecucion vs N (hexagonal, 10 realizaciones) =="
+"$PY" run.py particulas --rango 300 700 25 --realizaciones 10 --cada-eventos 100000 --placement hex
 
 echo "== 1.2 y 1.3: configuraciones de obstaculos (5 realizaciones, N = 100) =="
 # shellcheck disable=SC2086

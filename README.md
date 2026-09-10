@@ -70,6 +70,7 @@ Queda el ejecutable en `build/simulador`.
 | `--cada-eventos N` | `100` | Guarda el estado cada `N` eventos |
 | `--output ARCHIVO` | `salida.csv` | Serie temporal compacta |
 | `--trajectory ARCHIVO` | — | Trayectoria completa, solo para animar |
+| `--placement VALOR` | `random` | Colocación de partículas: `random` o `hex` (hexagonal) |
 
 ### Salidas
 
@@ -110,13 +111,20 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 Barridos sueltos:
 
 ```bash
-.venv/bin/python run.py particulas --rango 50 300 50 --realizaciones 10
+.venv/bin/python run.py particulas --rango 50 500 25 --realizaciones 10
+.venv/bin/python run.py particulas --rango 300 700 25 --realizaciones 10 --placement hex
 .venv/bin/python run.py configs vacia embudo --realizaciones 5 --trayectoria
 ```
 
 Por defecto `run.py` **no re-corre** un caso cuyo CSV ya existe; con `--forzar`
 sí. Las realizaciones usan semillas deterministas (`SEMILLA_BASE + i`) y la
 semilla va en el nombre del archivo, así que se ve de un vistazo qué falta.
+
+Cada corrida exitosa deja un *sidecar* `<csv>.resumen` al lado del CSV con las
+métricas del motor (tiempo de ejecución, eventos, goles, t90). El
+`resumen.csv` se reconstruye fusionando esos sidecars, así que un barrido
+cortado a la mitad no pierde los tiempos: alcanza con volver a correr el mismo
+comando (los casos completos se saltean y el resumen se regenera igual).
 
 Cada barrido deja un `resumen.csv` con una fila por realización, que es lo que
 leen los scripts de graficado.

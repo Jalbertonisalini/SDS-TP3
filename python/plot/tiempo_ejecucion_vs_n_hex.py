@@ -1,6 +1,6 @@
-"""Punto 1.1: tiempo de ejecucion promedio vs N, con su desvio estandar.
+"""Punto 1.1: tiempo de ejecucion promedio vs N (colocacion hexagonal).
 
-    python plot/tiempo_ejecucion_vs_n.py --salida ../entrega/1.1/tiempo_vs_n.png
+    python plot/tiempo_ejecucion_vs_n_hex.py --salida ../entrega/1.1/tiempo_vs_n_hex.png
 
 El tiempo lo mide el propio motor (wall-clock del bucle de eventos), asi que no
 incluye el arranque del proceso ni la escritura inicial.
@@ -23,8 +23,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--resumen", type=Path,
-                        default=config.RESULTADOS / "particulas" / "resumen.csv",
-                        help="CSV agregado del barrido en N")
+                        default=config.RESULTADOS / "particulas_hex" / "resumen.csv",
+                        help="CSV agregado del barrido en N (hexagonal)")
     parser.add_argument("--salida", type=Path, required=True, help="Archivo PNG de salida")
     args = parser.parse_args()
 
@@ -37,7 +37,7 @@ def main():
 
     fig, ax = plt.subplots(figsize=config.TAM_FIG)
     ax.errorbar(agrupado["N"], agrupado["mean"], yerr=agrupado["std"].fillna(0.0),
-                marker="o", capsize=4, linestyle="-")
+                marker="s", capsize=4, linestyle="-", color="tab:green")
     ax.set_xlabel("Cantidad de part\u00edculas", fontsize=config.FUENTE)
     ax.set_ylabel("Tiempo de ejecuci\u00f3n (s)", fontsize=config.FUENTE)
     ax.tick_params(labelsize=config.FUENTE)

@@ -31,7 +31,8 @@ void printUsage() {
         << "  --seed VALOR           Semilla del generador (default 42)\n"
         << "  --stop-fraction VALOR  Corta al alcanzar esta F_u; >1 desactiva el corte\n"
         << "                         (default 2.0)\n"
-        << "  --cada-eventos N       Guarda el estado cada N eventos (default 100)\n\n"
+        << "  --cada-eventos N       Guarda el estado cada N eventos (default 100)\n"
+        << "  --placement VALOR      Colocacion: random (default) o hex\n\n"
         << "Salida:\n"
         << "  --output ARCHIVO       Serie temporal compacta (default salida.csv)\n"
         << "  --trajectory ARCHIVO   Trayectoria completa para animar (default: no se escribe)\n"
@@ -79,6 +80,15 @@ Config parseArguments(const std::vector<std::string>& args, bool& showHelp) {
             config.stopFraction = std::stod(takeValue(args, i));
         } else if (flag == "--cada-eventos") {
             config.eventsPerSample = std::stol(takeValue(args, i));
+        } else if (flag == "--placement") {
+            std::string val = takeValue(args, i);
+            if (val == "hex" || val == "hexagonal") {
+                config.placement = Placement::Hexagonal;
+            } else if (val == "random") {
+                config.placement = Placement::Random;
+            } else {
+                throw std::runtime_error("Valor invalido para --placement: " + val);
+            }
         } else if (flag == "--output") {
             config.outputPath = takeValue(args, i);
         } else if (flag == "--trajectory") {

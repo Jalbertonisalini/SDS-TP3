@@ -1,6 +1,6 @@
-"""Punto 1.1: tiempo de ejecucion promedio vs N, con su desvio estandar.
+"""Punto 1.1: tiempo de ejecucion promedio vs N, escala log-log.
 
-    python plot/tiempo_ejecucion_vs_n.py --salida ../entrega/1.1/tiempo_vs_n.png
+    python plot/tiempo_ejecucion_vs_n_loglog.py --salida ../entrega/1.1/tiempo_vs_n_loglog.png
 
 El tiempo lo mide el propio motor (wall-clock del bucle de eventos), asi que no
 incluye el arranque del proceso ni la escritura inicial.
@@ -38,10 +38,14 @@ def main():
     fig, ax = plt.subplots(figsize=config.TAM_FIG)
     ax.errorbar(agrupado["N"], agrupado["mean"], yerr=agrupado["std"].fillna(0.0),
                 marker="o", capsize=4, linestyle="-")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlim(40, 500)
+    ax.set_ylim(3e-3, 30)
     ax.set_xlabel("Cantidad de part\u00edculas", fontsize=config.FUENTE)
     ax.set_ylabel("Tiempo de ejecuci\u00f3n (s)", fontsize=config.FUENTE)
     ax.tick_params(labelsize=config.FUENTE)
-    ax.grid(alpha=0.3)
+    ax.grid(alpha=0.3, which="both")
     fig.tight_layout()
 
     args.salida.parent.mkdir(parents=True, exist_ok=True)
