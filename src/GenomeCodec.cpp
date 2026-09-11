@@ -1,5 +1,7 @@
 #include "GenomeCodec.hpp"
 
+#include <algorithm>
+
 namespace {
 // Margen estricto respecto de un eje de simetria: un gen "pareado" o "de
 // cuadrante" nunca puede acercarse tanto al eje que su propio espejo lo
@@ -16,9 +18,10 @@ IdentityCodec::IdentityCodec(double length, double width, double minRadius, doub
     : length_(length), width_(width), minRadius_(minRadius), maxRadius_(maxRadius),
       obstacleCount_(obstacleCount) {}
 
-GeneBounds IdentityCodec::geneBounds(int) const {
-    return {maxRadius_, length_ - maxRadius_, maxRadius_, width_ - maxRadius_, minRadius_,
-            maxRadius_};
+PositionBounds IdentityCodec::positionBounds(int, double radius) const {
+    // std::max evita cotas invertidas si radius es mayor a medio dominio:
+    // colapsan a un punto en vez de [xMin > xMax] (UB en clamp/uniform_real).
+    return {radius, std::max(radius, length_ - radius), radius, std::max(radius, width_ - radius)};
 }
 
 std::vector<Obstacle> IdentityCodec::expand(const std::vector<ObstacleGene>& freeGenes) const {
@@ -41,16 +44,19 @@ HorizontalSymmetryCodec::HorizontalSymmetryCodec(double length, double width, do
       hasAxisGene_(obstacleCount % 2 == 1),
       freeCount_(obstacleCount / 2 + (obstacleCount % 2)) {}
 
-GeneBounds HorizontalSymmetryCodec::geneBounds(int index) const {
-    const double xMin = maxRadius_;
-    const double xMax = length_ - maxRadius_;
+PositionBounds HorizontalSymmetryCodec::positionBounds(int index, double radius) const {
+    const double xMin = radius;
+    const double xMax = std::max(xMin, length_ - radius);
     if (hasAxisGene_ && index == pairedCount_) {
         // Gen de eje: vive fijo sobre y = W/2, solo x y r son libres.
-        return {xMin, xMax, width_ / 2.0, width_ / 2.0, minRadius_, maxRadius_};
+        return {xMin, xMax, width_ / 2.0, width_ / 2.0};
     }
-    const double yMin = maxRadius_;
-    const double yMax = width_ / 2.0 - maxRadius_ - kAxisMargin;
-    return {xMin, xMax, yMin, yMax, minRadius_, maxRadius_};
+    const double yMin = radius;
+    // Si el radio ya no entra en la mitad de la mesa, colapsa a un punto: el
+    // espejo va a solaparse consigo mismo y isValidCandidate lo va a
+    // rechazar, pero las cotas en si nunca quedan invertidas.
+    const double yMax = std::max(yMin, width_ / 2.0 - radius - kAxisMargin);
+    return {xMin, xMax, yMin, yMax};
 }
 
 std::vector<Obstacle> HorizontalSymmetryCodec::expand(
@@ -81,16 +87,22 @@ FourQuadrantSymmetryCodec::FourQuadrantSymmetryCodec(double length, double width
       hasCenterGene_(obstacleCount % 4 == 1),
       freeCount_(obstacleCount / 4 + (obstacleCount % 4 == 1 ? 1 : 0)) {}
 
-GeneBounds FourQuadrantSymmetryCodec::geneBounds(int index) const {
+PositionBounds FourQuadrantSymmetryCodec::positionBounds(int index, double radius) const {
     if (hasCenterGene_ && index == quadCount_) {
-        // Gen central: fijo en (L/2, W/2), solo el radio es libre.
-        return {length_ / 2.0, length_ / 2.0, width_ / 2.0, width_ / 2.0, minRadius_, maxRadius_};
+        // Gen central: fijo en (L/2, W/2), solo el radio es libre. Sin
+        // espejo cercano: no tiene el techo geometrico de los genes de
+        // cuadrante, puede crecer hasta donde lo permitan el dominio y el
+        // resto de los obstaculos.
+        return {length_ / 2.0, length_ / 2.0, width_ / 2.0, width_ / 2.0};
     }
-    const double xMin = maxRadius_;
-    const double xMax = length_ / 2.0 - maxRadius_ - kAxisMargin;
-    const double yMin = maxRadius_;
-    const double yMax = width_ / 2.0 - maxRadius_ - kAxisMargin;
-    return {xMin, xMax, yMin, yMax, minRadius_, maxRadius_};
+    // Techo geometrico: si radius > ~min(L,W)/4, el propio espejo se
+    // solapa consigo mismo. Las cotas colapsan a un punto (nunca se
+    // invierten) y isValidCandidate rechaza el resto.
+    const double xMin = radius;
+    const double xMax = std::max(xMin, length_ / 2.0 - radius - kAxisMargin);
+    const double yMin = radius;
+    const double yMax = std::max(yMin, width_ / 2.0 - radius - kAxisMargin);
+    return {xMin, xMax, yMin, yMax};
 }
 
 std::vector<Obstacle> FourQuadrantSymmetryCodec::expand(

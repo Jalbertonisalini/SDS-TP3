@@ -31,11 +31,11 @@ std::vector<ObstacleGene> BlxAlphaCrossover::cross(const std::vector<ObstacleGen
         child.reserve(parentA.size());
 
         for (std::size_t i = 0; i < parentA.size(); ++i) {
-            const GeneBounds bounds = codec.geneBounds(static_cast<int>(i));
             ObstacleGene gene;
-            gene.r = blend(parentA[i].r, parentB[i].r, bounds.rMin, bounds.rMax, rng);
-            gene.x = blend(parentA[i].x, parentB[i].x, bounds.xMin, bounds.xMax, rng);
-            gene.y = blend(parentA[i].y, parentB[i].y, bounds.yMin, bounds.yMax, rng);
+            gene.r = blend(parentA[i].r, parentB[i].r, codec.minRadius(), codec.maxRadius(), rng);
+            const PositionBounds pos = codec.positionBounds(static_cast<int>(i), gene.r);
+            gene.x = blend(parentA[i].x, parentB[i].x, pos.xMin, pos.xMax, rng);
+            gene.y = blend(parentA[i].y, parentB[i].y, pos.yMin, pos.yMax, rng);
             child.push_back(gene);
         }
 

@@ -19,10 +19,15 @@ struct OptimizerConfig {
     double initialSpeed = 1.0;
     double maxTime = 100.0;
 
-    // Obstaculos a optimizar
+    // Obstaculos a optimizar. minRadius > particleRadius: un obstaculo mas
+    // chico que una particula no tiene sentido como deflector. maxRadius no
+    // tiene techo fisico real (solo el dominio y el resto de los
+    // obstaculos lo limitan) salvo en los genes de cuadrante/pareados bajo
+    // simetria, que tienen un techo geometrico propio cerca de min(L,W)/4
+    // sin importar este valor (ver GenomeCodec.hpp).
     int obstacleCount = 4;  // K
-    double minRadius = 0.0175;
-    double maxRadius = 0.15;
+    double minRadius = 0.02;
+    double maxRadius = 0.25;
     SymmetryMode symmetry = SymmetryMode::None;
 
     // Fitness (formula de la consigna)
@@ -39,11 +44,26 @@ struct OptimizerConfig {
     int seedsPerGeneration = 5;  // S, Common Random Numbers
     int tournamentSize = 3;
     int elitism = 2;
-    double crossoverAlpha = 0.3;       // alpha del BLX-alpha
-    double individualMutationRate = 0.3;
-    double geneMutationRate = 0.2;
-    double mutationSigmaPosition = 0.05;  // m
-    double mutationSigmaRadius = 0.02;    // m
+    double crossoverAlpha = 0.3;  // alpha del BLX-alpha
+
+    // Con genomas cortos (1 a 3 genes libres bajo simetria) el gateo doble
+    // (individual x gen) dejaba la probabilidad efectiva de mutar un gen en
+    // 0.3*0.2=6%: casi toda la poblacion eran interpolaciones BLX-alpha
+    // puras. individualRate=1.0 saca ese gateo redundante; geneRate solo
+    // queda como la unica perilla real.
+    double individualMutationRate = 1.0;
+    double geneMutationRate = 0.3;
+
+    // El sigma decae geometricamente de *Start (generacion 0, explorar) a
+    // *End (ultima generacion, explotar/afinar). Start-position es grande a
+    // proposito: el codec ya evita que una mutacion produzca una config
+    // invalida (clampea a positionBounds, que depende del radio real), asi
+    // que un paso grande solo significa "probar el otro extremo del rango",
+    // no arriesgar una excepcion.
+    double mutationSigmaPositionStart = 0.06;  // m
+    double mutationSigmaPositionEnd = 0.02;    // m
+    double mutationSigmaRadiusStart = 0.03;    // m
+    double mutationSigmaRadiusEnd = 0.008;     // m
 
     unsigned long seed = 42;  // RNG maestro: semillas por generacion + operadores geneticos
 
@@ -52,6 +72,14 @@ struct OptimizerConfig {
     void validate() const {
         if (obstacleCount <= 0) {
             throw std::runtime_error("--obstacles debe ser mayor que cero.");
+        }
+        if (minRadius <= particleRadius) {
+            throw std::runtime_error(
+                "--min-radius debe ser mayor que --radius (el radio de las particulas): un "
+                "obstaculo mas chico que una particula no tiene sentido como deflector.");
+        }
+        if (maxRadius < minRadius) {
+            throw std::runtime_error("--max-radius debe ser mayor o igual que --min-radius.");
         }
         if (symmetry == SymmetryMode::FourQuadrant && obstacleCount % 4 != 0 &&
             obstacleCount % 4 != 1) {

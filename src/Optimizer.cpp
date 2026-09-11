@@ -44,11 +44,12 @@ Individual Optimizer::randomIndividual(std::mt19937_64& rng) const {
     for (int attempt = 0; attempt < maxAttempts; ++attempt) {
         std::vector<ObstacleGene> genome(static_cast<std::size_t>(freeCount));
         for (int i = 0; i < freeCount; ++i) {
-            const GeneBounds bounds = codec_->geneBounds(i);
+            const double r = sampleInBounds(codec_->minRadius(), codec_->maxRadius(), rng);
+            const PositionBounds pos = codec_->positionBounds(i, r);
             genome[static_cast<std::size_t>(i)] = {
-                sampleInBounds(bounds.xMin, bounds.xMax, rng),
-                sampleInBounds(bounds.yMin, bounds.yMax, rng),
-                sampleInBounds(bounds.rMin, bounds.rMax, rng),
+                sampleInBounds(pos.xMin, pos.xMax, rng),
+                sampleInBounds(pos.yMin, pos.yMax, rng),
+                r,
             };
         }
         if (isValidCandidate(codec_->expand(genome), config_)) {
@@ -149,6 +150,13 @@ Individual Optimizer::run(GenerationLogger* logger) {
             break;  // Ultima generacion: no hace falta armar la siguiente.
         }
 
+        // 0 en la primera generacion, 1 en la ultima: la mutacion arranca
+        // explorando pasos grandes y termina afinando cerca del optimo.
+        const double progress = config_.generations > 1
+                                    ? static_cast<double>(generation) /
+                                          static_cast<double>(config_.generations - 1)
+                                    : 1.0;
+
         std::vector<Individual> next;
         next.reserve(static_cast<std::size_t>(config_.populationSize));
         for (int i = 0; i < config_.elitism; ++i) {
@@ -160,7 +168,7 @@ Individual Optimizer::run(GenerationLogger* logger) {
             const Individual& parentB = selection_->select(population, masterRng);
             std::vector<ObstacleGene> childGenome =
                 crossover_->cross(parentA.genome, parentB.genome, *codec_, masterRng);
-            mutation_->mutate(childGenome, *codec_, masterRng);
+            mutation_->mutate(childGenome, *codec_, progress, masterRng);
             next.push_back({childGenome, std::numeric_limits<double>::infinity()});
         }
         population = std::move(next);

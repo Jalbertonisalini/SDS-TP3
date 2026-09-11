@@ -39,8 +39,11 @@ void printUsage() {
         << "Obstaculos a optimizar:\n"
         << "  --obstacles K          Cantidad de obstaculos (default 4)\n"
         << "  --symmetry VALOR       none (default), horizontal o quad\n"
-        << "  --min-radius VALOR     Radio minimo de obstaculo en m (default 0.0175)\n"
-        << "  --max-radius VALOR     Radio maximo de obstaculo en m (default 0.15)\n"
+        << "  --min-radius VALOR     Radio minimo de obstaculo en m, > --radius (default 0.02)\n"
+        << "  --max-radius VALOR     Radio maximo de obstaculo en m (default 0.25). Los genes\n"
+        << "                         de cuadrante/pareados (--symmetry != none) tienen un\n"
+        << "                         techo geometrico propio cerca de min(L,W)/4 sin importar\n"
+        << "                         este valor; el gen central no\n"
         << "  --max-packing-density VALOR\n"
         << "                         Factor de seguridad del filtro de factibilidad\n"
         << "                         de empaquetamiento (default 0.5)\n"
@@ -58,13 +61,17 @@ void printUsage() {
         << "  --crossover-alpha VALOR\n"
         << "                         Alpha del BLX-alpha (default 0.3)\n"
         << "  --mutation-individual-rate VALOR\n"
-        << "                         Probabilidad de mutar un individuo (default 0.3)\n"
+        << "                         Probabilidad de mutar un individuo (default 1.0)\n"
         << "  --mutation-gene-rate VALOR\n"
-        << "                         Probabilidad de mutar cada gen (default 0.2)\n"
-        << "  --mutation-sigma-position VALOR\n"
-        << "                         Sigma de la mutacion gaussiana en x,y (default 0.05)\n"
-        << "  --mutation-sigma-radius VALOR\n"
-        << "                         Sigma de la mutacion gaussiana en r (default 0.02)\n"
+        << "                         Probabilidad de mutar cada gen (default 0.3)\n"
+        << "  --mutation-sigma-position-start VALOR\n"
+        << "                         Sigma en x,y en la generacion 0 (default 0.06 m)\n"
+        << "  --mutation-sigma-position-end VALOR\n"
+        << "                         Sigma en x,y en la ultima generacion (default 0.02 m)\n"
+        << "  --mutation-sigma-radius-start VALOR\n"
+        << "                         Sigma en r en la generacion 0 (default 0.03 m)\n"
+        << "  --mutation-sigma-radius-end VALOR\n"
+        << "                         Sigma en r en la ultima generacion (default 0.008 m)\n"
         << "  --seed VALOR           Semilla del RNG maestro (default 42)\n"
         << "  --threads N            Hilos OpenMP a usar (default: todos los disponibles)\n\n"
         << "Salida:\n"
@@ -153,10 +160,14 @@ CliOptions parseArguments(const std::vector<std::string>& args, bool& showHelp) 
             options.config.individualMutationRate = std::stod(takeValue(args, i));
         } else if (flag == "--mutation-gene-rate") {
             options.config.geneMutationRate = std::stod(takeValue(args, i));
-        } else if (flag == "--mutation-sigma-position") {
-            options.config.mutationSigmaPosition = std::stod(takeValue(args, i));
-        } else if (flag == "--mutation-sigma-radius") {
-            options.config.mutationSigmaRadius = std::stod(takeValue(args, i));
+        } else if (flag == "--mutation-sigma-position-start") {
+            options.config.mutationSigmaPositionStart = std::stod(takeValue(args, i));
+        } else if (flag == "--mutation-sigma-position-end") {
+            options.config.mutationSigmaPositionEnd = std::stod(takeValue(args, i));
+        } else if (flag == "--mutation-sigma-radius-start") {
+            options.config.mutationSigmaRadiusStart = std::stod(takeValue(args, i));
+        } else if (flag == "--mutation-sigma-radius-end") {
+            options.config.mutationSigmaRadiusEnd = std::stod(takeValue(args, i));
         } else if (flag == "--seed") {
             options.config.seed = std::stoul(takeValue(args, i));
         } else if (flag == "--threads") {
@@ -234,8 +245,9 @@ int main(int argc, char** argv) {
             std::make_unique<BlxAlphaCrossover>(options.config, options.config.crossoverAlpha);
         auto mutation = std::make_unique<GaussianMutation>(
             options.config, options.config.individualMutationRate,
-            options.config.geneMutationRate, options.config.mutationSigmaPosition,
-            options.config.mutationSigmaRadius);
+            options.config.geneMutationRate, options.config.mutationSigmaPositionStart,
+            options.config.mutationSigmaPositionEnd, options.config.mutationSigmaRadiusStart,
+            options.config.mutationSigmaRadiusEnd);
 
         Optimizer optimizer(options.config, std::move(codec), std::move(fitness),
                             std::move(selection), std::move(crossover), std::move(mutation));
