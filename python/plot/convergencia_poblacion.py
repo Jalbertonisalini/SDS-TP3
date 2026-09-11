@@ -122,7 +122,10 @@ def main():
 
     anim = animation.FuncAnimation(fig, actualizar, frames=len(generaciones), blit=False)
     args.salida.parent.mkdir(parents=True, exist_ok=True)
-    escritor = animation.FFMpegWriter(fps=args.fps, codec="libx264", bitrate=6000)
+    # -pix_fmt yuv420p: sin esto libx264 codifica en yuv444p (perfil "High
+    # 4:4:4"), que Windows/VLC reproducen pero QuickTime no reconoce.
+    escritor = animation.FFMpegWriter(fps=args.fps, codec="libx264", bitrate=6000,
+                                      extra_args=["-pix_fmt", "yuv420p"])
     anim.save(str(args.salida), writer=escritor, dpi=100)
     print(f"Animacion guardada en {args.salida}")
     return 0
