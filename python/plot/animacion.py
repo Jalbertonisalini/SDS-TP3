@@ -5,6 +5,9 @@
                              --salida output/embudo.mp4 \
                              --fotograma ../entrega/1.2/embudo_frame.png
 
+Con --dt-cuadro 0.04 y --fps 25 el video corre en tiempo real (1 s de video =
+1 s simulado); el titulo muestra t, N_g, F_u y t90 una vez alcanzado.
+
 Las particulas frescas se dibujan en azul y las usadas en rojo. Los obstaculos
 salen del mismo archivo de configuracion que recibio el motor: la trayectoria no
 los repite.
@@ -23,6 +26,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from matplotlib.patches import Circle
 
@@ -62,6 +66,59 @@ def dibujar_mesa(ax, obstaculos):
         ax.add_patch(Circle((x, y), radio, color="0.4"))
 
 
+def estados_por_instante(datos):
+    """Pasa la trayectoria a matrices (instante, particula) para no filtrar el
+    DataFrame en cada cuadro."""
+    # El ultimo estado puede repetirse si t_max coincide con un muestreo.
+    datos = datos.drop_duplicates(["Time", "ID"], keep="last")
+    columnas = ["X", "Y", "VX", "VY", "State"]
+    tabla = datos.pivot(index="Time", columns="ID", values=columnas)
+    return tabla.index.to_numpy(), {columna: tabla[columna].to_numpy() for columna in columnas}
+
+
+def tiempos_de_cuadros(instantes, dt_cuadro):
+    """Devuelve el tiempo de cada cuadro y el estado guardado que le corresponde.
+
+    El muestreo es cada N eventos, asi que los instantes guardados no son
+    equiespaciados. Con dt_cuadro se arma una grilla uniforme y cada cuadro
+    usa el ultimo estado guardado anterior a su tiempo, para que el video
+    avance a ritmo constante de tiempo simulado.
+    """
+    if dt_cuadro is None:
+        return instantes, np.arange(len(instantes))
+    grilla = np.arange(instantes[0], instantes[-1] + dt_cuadro / 2, dt_cuadro)
+    return grilla, np.searchsorted(instantes, grilla, side="right") - 1
+
+
+def posiciones(matrices, instantes, indice, tiempo, interpolar):
+    """Posiciones de todas las particulas en `tiempo`.
+
+    Interpolar solo es exacto si la trayectoria guarda todos los eventos
+    (--cada-eventos 1): entre dos estados consecutivos ninguna particula choca y
+    todas siguen en movimiento rectilineo uniforme con la velocidad guardada.
+    """
+    xs, ys = matrices["X"][indice], matrices["Y"][indice]
+    if not interpolar:
+        return xs, ys
+    vuelo = tiempo - instantes[indice]
+    return xs + matrices["VX"][indice] * vuelo, ys + matrices["VY"][indice] * vuelo
+
+
+def calcular_t90(instantes, estados):
+    """Primer instante guardado con F_u >= 0.9, o None si nunca se alcanza."""
+    fraccion_usadas = estados.mean(axis=1)
+    alcanzados = np.nonzero(fraccion_usadas >= config.FRACCION_OBJETIVO)[0]
+    return instantes[alcanzados[0]] if len(alcanzados) else None
+
+
+def texto_rotulo(instante, estados, t90):
+    goles = int(estados.sum())
+    texto = f"t = {instante:6.2f} s    $N_g$ = {goles:3d}    $F_u$ = {goles / len(estados):.2f}"
+    if t90 is not None and instante >= t90:
+        texto += f"    $t_{{90}}$ = {t90:.2f} s"
+    return texto
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -75,6 +132,12 @@ def main():
     parser.add_argument("--instante", type=float, default=None,
                         help="Tiempo del cuadro representativo, en s (default: el ultimo)")
     parser.add_argument("--fps", type=int, default=25, help="Cuadros por segundo del MP4")
+    parser.add_argument("--dt-cuadro", type=float, default=None,
+                        help="Tiempo simulado entre cuadros, en s. Remuestrea a una grilla "
+                             "uniforme (default: un cuadro por cada estado guardado)")
+    parser.add_argument("--interpolar", action="store_true",
+                        help="Con --dt-cuadro, avanza cada particula en vuelo libre desde el "
+                             "ultimo estado guardado. Requiere correr el motor con --cada-eventos 1")
     args = parser.parse_args()
 
     datos = pd.read_csv(args.trayectoria)
@@ -107,19 +170,27 @@ def main():
 
     fig, ax = plt.subplots(figsize=(10, 10 * config.ANCHO / config.LARGO))
     dibujar_mesa(ax, obstaculos)
-    circulos = [Circle((0, 0), config.RADIO, color=COLORES[0]) for _ in range(len(datos["ID"].unique()))]
+    instantes, matrices = estados_por_instante(datos)
+    estados = matrices["State"]
+    tiempos, indices = tiempos_de_cuadros(instantes, args.dt_cuadro)
+    t90 = calcular_t90(instantes, estados)
+
+    circulos = [Circle((0, 0), config.RADIO, color=COLORES[0]) for _ in range(estados.shape[1])]
     for circulo in circulos:
         ax.add_patch(circulo)
+    rotulo = ax.set_title(" ", fontsize=14)
 
-    def actualizar(indice):
-        cuadro = datos[datos["Time"] == instantes[indice]]
-        for _, fila in cuadro.iterrows():
-            circulo = circulos[int(fila["ID"])]
-            circulo.center = (fila["X"], fila["Y"])
-            circulo.set_color(COLORES[int(fila["State"])])
-        return circulos
+    def actualizar(numero_cuadro):
+        tiempo, indice = tiempos[numero_cuadro], indices[numero_cuadro]
+        xs, ys = posiciones(matrices, instantes, indice, tiempo, args.interpolar)
+        for circulo, x, y, estado in zip(circulos, xs, ys, estados[indice]):
+            circulo.center = (x, y)
+            circulo.set_color(COLORES[int(estado)])
+        rotulo.set_text(texto_rotulo(tiempo, estados[indice], t90))
+        return [*circulos, rotulo]
 
-    anim = animation.FuncAnimation(fig, actualizar, frames=len(instantes), blit=True)
+    # Sin blit: el titulo queda fuera de los ejes y blit no lo redibujaria.
+    anim = animation.FuncAnimation(fig, actualizar, frames=len(tiempos), blit=False)
     args.salida.parent.mkdir(parents=True, exist_ok=True)
     escritor = animation.FFMpegWriter(fps=args.fps, codec="libx264", bitrate=6000)
     anim.save(str(args.salida), writer=escritor, dpi=100)
