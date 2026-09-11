@@ -331,13 +331,25 @@ double SimulationEngine::meanSquaredDisplacement() const {
     return total / static_cast<double>(particles_.size());
 }
 
-void SimulationEngine::sample(OutputWriter& writer) {
+void SimulationEngine::sample(OutputWriter* writer) {
+    if (writer == nullptr) {
+        return;
+    }
     const double usedFraction = static_cast<double>(goals_) / config_.particleCount;
-    writer.writeSeries(time_, goals_, usedFraction, meanSquaredDisplacement());
-    writer.writeTrajectory(time_, particles_);
+    writer->writeSeries(time_, goals_, usedFraction, meanSquaredDisplacement());
+    writer->writeTrajectory(time_, particles_);
 }
 
 void SimulationEngine::run(OutputWriter& writer) {
+    runLoop(&writer);
+}
+
+SimulationEngine::RunResult SimulationEngine::runSilent() {
+    runLoop(nullptr);
+    return {timeToNinety_, goals_};
+}
+
+void SimulationEngine::runLoop(OutputWriter* writer) {
     const auto start = std::chrono::steady_clock::now();
 
     for (int i = 0; i < config_.particleCount; ++i) {

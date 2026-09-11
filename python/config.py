@@ -9,6 +9,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 BUILD = RAIZ / "build"
 EJECUTABLE = BUILD / "simulador"
+EJECUTABLE_GA = BUILD / "optimizador"
 RESULTADOS = BUILD / "resultados"
 CONFIGS = RAIZ / "configs"
 ENTREGA = RAIZ / "entrega"

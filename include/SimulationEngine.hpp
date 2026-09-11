@@ -13,11 +13,24 @@
 // todas las colisiones son elasticas.
 class SimulationEngine {
 public:
+    // Resultado minimo de una corrida sin I/O: lo que necesita un evaluador
+    // de fitness (t90 y goles a t_max), nada mas.
+    struct RunResult {
+        double t90;
+        int goals;
+    };
+
     explicit SimulationEngine(const Config& config);
 
     // Corre la simulacion completa y va volcando el estado cada
     // config.eventsPerSample eventos. No hace I/O de inicializacion.
     void run(OutputWriter& writer);
+
+    // Igual que run(), pero sin OutputWriter: no calcula MSD ni pasa por
+    // sample() en ningun momento, corre exclusivamente en memoria. Pensada
+    // para evaluaciones masivas (p.ej. busqueda genetica) donde el unico
+    // resultado que importa es t90/goles.
+    RunResult runSilent();
 
     // Metricas de la corrida, disponibles despues de run().
     double wallClockSeconds() const { return wallClockSeconds_; }
@@ -51,7 +64,11 @@ private:
     void resolveHorizontalWall(int i);
 
     double meanSquaredDisplacement() const;
-    void sample(OutputWriter& writer);
+    void sample(OutputWriter* writer);
+
+    // Bucle de eventos compartido por run() y runSilent(). writer == nullptr
+    // significa "sin I/O": sample() no se llama en ningun punto.
+    void runLoop(OutputWriter* writer);
 
     Config config_;
     std::vector<Particle> particles_;
