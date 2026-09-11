@@ -7,9 +7,11 @@ ellos, no se re-corre un caso ya registrado salvo --forzar).
 
 Guarda por cada (K, semilla): la config ganadora (config.txt, cargable con
 `simulador --config`) y el log de convergencia (log.csv) bajo
-build/resultados/genetico/K<k>_s<semilla>/, y un sidecar
+build/resultados/genetico/<symmetry>/K<k>_s<semilla>/, y un sidecar
 K<k>_s<semilla>.resumen con lo que imprime `optimizador` por stdout -- con
-eso alcanza para reproducir y defender el resultado.
+eso alcanza para reproducir y defender el resultado. La carpeta por
+simetria (quad/, horizontal/, none/) permite correr experimentos con
+distintas simetrias sin que se pisen entre si.
 """
 
 import argparse
@@ -37,7 +39,7 @@ def fila_desde_sidecar_genetico(sidecar):
 
 def correr_ga(k, semilla, args, forzar):
     """Corre la busqueda genetica para un K y una semilla si hace falta."""
-    directorio = config.RESULTADOS / "genetico"
+    directorio = config.RESULTADOS / "genetico" / args.symmetry
     caso = directorio / f"K{k}_s{semilla}"
     sidecar = directorio / f"K{k}_s{semilla}.resumen"
     config_out = caso / "config.txt"
@@ -70,7 +72,7 @@ def correr_ga(k, semilla, args, forzar):
 
 
 def barrido_obstaculos(args):
-    directorio = config.RESULTADOS / "genetico"
+    directorio = config.RESULTADOS / "genetico" / args.symmetry
     filas = []
 
     for k in args.valores:
