@@ -83,18 +83,21 @@ void SimulationEngine::placeParticlesHexagonal() {
     const double r = config_.particleRadius;
     std::uniform_real_distribution<double> angleDist(0.0, 2.0 * M_PI);
 
-    const double colSpacing = 2.0 * r;
-    const double rowSpacing = std::sqrt(3.0) * r;
+    // Red hexagonal por columnas: dentro de una columna los sitios estan a 2r y
+    // las columnas impares se corren r en y, asi que las columnas tienen que
+    // estar a sqrt(3) r para que los vecinos en diagonal tambien queden a 2r.
+    // El margen evita que el redondeo deje vecinos solapados por ~1e-17 m.
+    const double spacingMargin = 1.0 + 1e-6;
+    const double colSpacing = std::sqrt(3.0) * r * spacingMargin;
+    const double rowSpacing = 2.0 * r * spacingMargin;
 
     // Generar posiciones en grilla hexagonal dentro del dominio.
     std::vector<Vec2> grid;
     int col = 0;
     for (double x = r; x <= config_.length - r; x += colSpacing) {
-        int row = 0;
-        double xOffset = (col % 2 == 1) ? r : 0.0;
-        for (double y = r + xOffset; y <= config_.width - r; y += rowSpacing) {
+        const double yOffset = (col % 2 == 1) ? r * spacingMargin : 0.0;
+        for (double y = r + yOffset; y <= config_.width - r; y += rowSpacing) {
             grid.push_back({x, y});
-            ++row;
         }
         ++col;
     }
