@@ -97,7 +97,7 @@ double Optimizer::evaluateIndividual(const std::vector<ObstacleGene>& genome,
     return total / static_cast<double>(seeds.size());
 }
 
-Individual Optimizer::run(GenerationLogger* logger) {
+Individual Optimizer::run(GenerationLogger* logger, PopulationLogger* populationLogger) {
     const auto start = std::chrono::steady_clock::now();
 
     std::mt19937_64 masterRng(config_.seed);
@@ -132,6 +132,10 @@ Individual Optimizer::run(GenerationLogger* logger) {
             if (individual.fitness < best.fitness) {
                 best = individual;
             }
+        }
+
+        if (populationLogger != nullptr) {
+            populationLogger->log(generation, population, *codec_);
         }
 
         if (logger != nullptr) {

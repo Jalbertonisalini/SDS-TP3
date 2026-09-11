@@ -24,6 +24,7 @@ add_executable(optimizador
     src/CandidateValidator.cpp
     src/CrossoverStrategy.cpp
     src/MutationStrategy.cpp
+    src/PopulationLogger.cpp
     src/ObstacleConfig.cpp
     src/OutputWriter.cpp
     src/SimulationEngine.cpp

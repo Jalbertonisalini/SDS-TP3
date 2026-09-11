@@ -18,6 +18,7 @@
 #include "MutationStrategy.hpp"
 #include "Optimizer.hpp"
 #include "OptimizerConfig.hpp"
+#include "PopulationLogger.hpp"
 #include "SelectionStrategy.hpp"
 
 namespace {
@@ -78,6 +79,15 @@ void printUsage() {
         << "  --config-out ARCHIVO   Mejor configuracion encontrada, formato \"x y R\"\n"
         << "                         cargable con simulador --config (default mejor_config.txt)\n"
         << "  --log ARCHIVO          CSV de convergencia por generacion (default: no se escribe)\n"
+        << "  --population-log DIRECTORIO\n"
+        << "                         Guarda la poblacion completa (obstaculos + fitness) de\n"
+        << "                         cada --population-log-every generaciones, un CSV por\n"
+        << "                         generacion (gen_00000.csv, ...), e imprime el progreso por\n"
+        << "                         pantalla. Para animar la convergencia. Pensado para una\n"
+        << "                         corrida chica y puntual, no para el barrido grande\n"
+        << "                         (default: no se escribe)\n"
+        << "  --population-log-every N\n"
+        << "                         Cada cuantas generaciones guardar (default 5)\n"
         << "  --help                 Muestra esta ayuda\n";
 }
 
@@ -92,6 +102,8 @@ struct CliOptions {
     OptimizerConfig config;
     std::string configOutPath = "mejor_config.txt";
     std::string logPath;
+    std::string populationLogPath;
+    int populationLogEvery = 5;
     int threads = 0;  // 0 = no tocar el default de OpenMP
 };
 
@@ -176,6 +188,10 @@ CliOptions parseArguments(const std::vector<std::string>& args, bool& showHelp) 
             options.configOutPath = takeValue(args, i);
         } else if (flag == "--log") {
             options.logPath = takeValue(args, i);
+        } else if (flag == "--population-log") {
+            options.populationLogPath = takeValue(args, i);
+        } else if (flag == "--population-log-every") {
+            options.populationLogEvery = std::stoi(takeValue(args, i));
         } else {
             throw std::runtime_error("Flag desconocido: " + flag);
         }
@@ -256,9 +272,14 @@ int main(int argc, char** argv) {
         if (!options.logPath.empty()) {
             logger = std::make_unique<GenerationLogger>(options.logPath);
         }
+        std::unique_ptr<PopulationLogger> populationLogger;
+        if (!options.populationLogPath.empty()) {
+            populationLogger = std::make_unique<PopulationLogger>(
+                options.populationLogPath, options.populationLogEvery, options.config.generations);
+        }
 
         const auto start = std::chrono::steady_clock::now();
-        Individual best = optimizer.run(logger.get());
+        Individual best = optimizer.run(logger.get(), populationLogger.get());
         const auto end = std::chrono::steady_clock::now();
 
         const std::vector<Obstacle> bestObstacles = optimizer.codec().expand(best.genome);

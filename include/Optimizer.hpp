@@ -11,6 +11,7 @@
 #include "Individual.hpp"
 #include "MutationStrategy.hpp"
 #include "OptimizerConfig.hpp"
+#include "PopulationLogger.hpp"
 #include "SelectionStrategy.hpp"
 
 // Orquestador del algoritmo genetico. No sabe nada de fisica: arma un
@@ -29,8 +30,11 @@ public:
     // Corre config_.generations generaciones y devuelve el mejor individuo
     // visto en toda la corrida (no solo el de la ultima generacion). Si
     // logger no es nullptr, se loguea una fila de convergencia por
-    // generacion.
-    Individual run(GenerationLogger* logger = nullptr);
+    // generacion. Si populationLogger no es nullptr, se vuelca la poblacion
+    // completa (obstaculos + fitness) de cada generacion -- pensado para una
+    // corrida chica y puntual que se quiere animar, no para el barrido
+    // grande.
+    Individual run(GenerationLogger* logger = nullptr, PopulationLogger* populationLogger = nullptr);
 
     const GenomeCodec& codec() const { return *codec_; }
 
