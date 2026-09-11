@@ -14,14 +14,19 @@
 //  - Trayectoria completa ("Time,ID,X,Y,VX,VY,State"): solo para animar, pesa mucho.
 //    Los obstaculos no van aca; la animacion los lee del mismo archivo de configuracion
 //    que recibio el motor.
-class OutputWriter {
+class OutputWriter
+{
 public:
-    OutputWriter(const std::string& seriesPath, const std::string& trajectoryPath);
+    // Si noOutput es true no se abre ningun archivo y las escrituras son no-ops;
+    // pensado para corridas masivas donde solo importa
+    // el resumen por stdout y escribir a disco llenaria el disco rapido.
+    OutputWriter(const std::string &seriesPath, const std::string &trajectoryPath,
+                 bool noOutput = false);
 
     bool writesTrajectory() const { return trajectory_.is_open(); }
 
     void writeSeries(double time, int goals, double usedFraction, double meanSquaredDisplacement);
-    void writeTrajectory(double time, const std::vector<Particle>& particles);
+    void writeTrajectory(double time, const std::vector<Particle> &particles);
 
 private:
     std::ofstream series_;

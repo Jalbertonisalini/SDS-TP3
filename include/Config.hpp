@@ -33,6 +33,7 @@ struct Config {
     std::string obstaclesPath;   // Archivo de obstaculos; vacio = mesa vacia
     std::string outputPath = "salida.csv";     // Serie temporal compacta
     std::string trajectoryPath;  // Trayectoria completa; vacio = no se escribe
+    bool noOutput = false;  // Si esta activo, no se escribe ningun archivo a disco
 
     // Colocacion de particulas
     Placement placement = Placement::Random;
