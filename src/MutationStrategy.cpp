@@ -37,8 +37,8 @@ void GaussianMutation::mutate(std::vector<ObstacleGene>& genome, const GenomeCod
 
         for (int attempt = 0; attempt < maxAttempts; ++attempt) {
             ObstacleGene candidate = original;
-            candidate.r =
-                std::clamp(candidate.r + radiusNoise(rng), codec.minRadius(), codec.maxRadius());
+            candidate.r = std::clamp(candidate.r + radiusNoise(rng), codec.minRadius(),
+                                      codec.radiusCeiling(static_cast<int>(i)));
             const PositionBounds bounds = codec.positionBounds(static_cast<int>(i), candidate.r);
             candidate.x = std::clamp(candidate.x + posNoise(rng), bounds.xMin, bounds.xMax);
             candidate.y = std::clamp(candidate.y + posNoise(rng), bounds.yMin, bounds.yMax);

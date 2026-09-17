@@ -1,12 +1,30 @@
 #include "GenomeCodec.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
 // Margen estricto respecto de un eje de simetria: un gen "pareado" o "de
 // cuadrante" nunca puede acercarse tanto al eje que su propio espejo lo
 // toque, sea cual sea el radio que le toque dentro de [minR, maxR].
 constexpr double kAxisMargin = 1e-3;
+
+// N circulos de radio `radio` que van de `radio` a `span - radio`, tocando
+// AMBOS extremos exacto (reparte el paso real, siempre >= al minimo, en vez
+// de dejar un resto sin cubrir al final -- ese resto es justo el canal
+// angosto que aprendimos a evitar).
+std::vector<double> posicionesFlush(double span, double radio, double pasoMinimo) {
+    const int n = static_cast<int>(std::floor((span - 2.0 * radio) / pasoMinimo)) + 1;
+    if (n <= 1) {
+        return {span / 2.0};
+    }
+    const double paso = (span - 2.0 * radio) / (n - 1);
+    std::vector<double> pos(static_cast<std::size_t>(n));
+    for (int i = 0; i < n; ++i) {
+        pos[static_cast<std::size_t>(i)] = radio + i * paso;
+    }
+    return pos;
+}
 }  // namespace
 
 // ---------------------------------------------------------------------------
@@ -44,6 +62,16 @@ HorizontalSymmetryCodec::HorizontalSymmetryCodec(double length, double width, do
       hasAxisGene_(obstacleCount % 2 == 1),
       freeCount_(obstacleCount / 2 + (obstacleCount % 2)) {}
 
+double HorizontalSymmetryCodec::radiusCeiling(int index) const {
+    if (hasAxisGene_ && index == pairedCount_) {
+        // Gen de eje: fijo en y = W/2, sin espejo que lo limite. El techo
+        // real es la contencion en el dominio (isValidCandidate se encarga
+        // del resto, incluida la restriccion (ii) via isPackingFeasible).
+        return std::min(length_, width_) / 2.0;
+    }
+    return maxRadius_;
+}
+
 PositionBounds HorizontalSymmetryCodec::positionBounds(int index, double radius) const {
     const double xMin = radius;
     const double xMax = std::max(xMin, length_ - radius);
@@ -61,14 +89,18 @@ PositionBounds HorizontalSymmetryCodec::positionBounds(int index, double radius)
 
 std::vector<Obstacle> HorizontalSymmetryCodec::expand(
     const std::vector<ObstacleGene>& freeGenes) const {
+    // Acepta genomas parciales (freeGenes.size() < freeCount()): el sampler
+    // secuencial de Optimizer::randomIndividual valida un gen a la vez, sin
+    // haber generado todavia el resto.
     std::vector<Obstacle> obstacles;
     obstacles.reserve(static_cast<std::size_t>(obstacleCount_));
-    for (int i = 0; i < pairedCount_; ++i) {
+    const int paired = std::min(pairedCount_, static_cast<int>(freeGenes.size()));
+    for (int i = 0; i < paired; ++i) {
         const ObstacleGene& gene = freeGenes[static_cast<std::size_t>(i)];
         obstacles.push_back({{gene.x, gene.y}, gene.r});
         obstacles.push_back({{gene.x, width_ - gene.y}, gene.r});
     }
-    if (hasAxisGene_) {
+    if (hasAxisGene_ && static_cast<int>(freeGenes.size()) > pairedCount_) {
         const ObstacleGene& gene = freeGenes[static_cast<std::size_t>(pairedCount_)];
         obstacles.push_back({{gene.x, width_ / 2.0}, gene.r});
     }
@@ -86,6 +118,17 @@ FourQuadrantSymmetryCodec::FourQuadrantSymmetryCodec(double length, double width
       obstacleCount_(obstacleCount), quadCount_(obstacleCount / 4),
       hasCenterGene_(obstacleCount % 4 == 1),
       freeCount_(obstacleCount / 4 + (obstacleCount % 4 == 1 ? 1 : 0)) {}
+
+double FourQuadrantSymmetryCodec::radiusCeiling(int index) const {
+    if (hasCenterGene_ && index == quadCount_) {
+        // Gen central: sin espejo que lo limite (ver comentario en
+        // positionBounds). El techo real es la contencion en el dominio;
+        // isValidCandidate se encarga del resto (overlap con los otros
+        // obstaculos, restriccion (ii) via isPackingFeasible).
+        return std::min(length_, width_) / 2.0;
+    }
+    return maxRadius_;
+}
 
 PositionBounds FourQuadrantSymmetryCodec::positionBounds(int index, double radius) const {
     if (hasCenterGene_ && index == quadCount_) {
@@ -107,18 +150,80 @@ PositionBounds FourQuadrantSymmetryCodec::positionBounds(int index, double radiu
 
 std::vector<Obstacle> FourQuadrantSymmetryCodec::expand(
     const std::vector<ObstacleGene>& freeGenes) const {
+    // Acepta genomas parciales (freeGenes.size() < freeCount()): el sampler
+    // secuencial de Optimizer::randomIndividual valida un gen a la vez, sin
+    // haber generado todavia el resto.
     std::vector<Obstacle> obstacles;
     obstacles.reserve(static_cast<std::size_t>(obstacleCount_));
-    for (int i = 0; i < quadCount_; ++i) {
+    const int quads = std::min(quadCount_, static_cast<int>(freeGenes.size()));
+    for (int i = 0; i < quads; ++i) {
         const ObstacleGene& gene = freeGenes[static_cast<std::size_t>(i)];
         obstacles.push_back({{gene.x, gene.y}, gene.r});
         obstacles.push_back({{length_ - gene.x, gene.y}, gene.r});
         obstacles.push_back({{gene.x, width_ - gene.y}, gene.r});
         obstacles.push_back({{length_ - gene.x, width_ - gene.y}, gene.r});
     }
-    if (hasCenterGene_) {
+    if (hasCenterGene_ && static_cast<int>(freeGenes.size()) > quadCount_) {
         const ObstacleGene& gene = freeGenes[static_cast<std::size_t>(quadCount_)];
         obstacles.push_back({{length_ / 2.0, width_ / 2.0}, gene.r});
     }
+    return obstacles;
+}
+
+// ---------------------------------------------------------------------------
+// WallProfileCodec
+// ---------------------------------------------------------------------------
+
+WallProfileCodec::WallProfileCodec(double length, double width, int controlPoints,
+                                   double minDepth, double maxDepth, double wallGrain)
+    : length_(length), width_(width), controlPoints_(controlPoints), minDepth_(minDepth),
+      maxDepth_(maxDepth), wallGrain_(wallGrain) {}
+
+PositionBounds WallProfileCodec::positionBounds(int, double) const {
+    // x,y del gen no se usan (expand() solo lee .r, reinterpretado como
+    // profundidad); devolver un punto fijo hace que esos campos queden
+    // congelados en 0, sampling/mutacion no pierden tiempo perturbandolos.
+    return {0.0, 0.0, 0.0, 0.0};
+}
+
+std::vector<Obstacle> WallProfileCodec::expand(const std::vector<ObstacleGene>& freeGenes) const {
+    const int n = static_cast<int>(freeGenes.size());
+    if (n == 0) {
+        return {};
+    }
+    // Puntos de control evenly-spaced en y in [0, W/2] (n==1: profundidad
+    // constante en toda la mesa).
+    const double halfWidth = width_ / 2.0;
+
+    auto profundidadEn = [&](double y) {
+        // Espeja y a [0, W/2]: el perfil es simetrico respecto de y = W/2.
+        const double yFold = std::min(y, width_ - y);
+        if (n == 1) {
+            return freeGenes[0].r;
+        }
+        const double posicion = yFold / halfWidth * (n - 1);  // in [0, n-1]
+        const int idx = std::min(n - 2, static_cast<int>(std::floor(posicion)));
+        const double frac = posicion - idx;
+        const double d0 = freeGenes[static_cast<std::size_t>(idx)].r;
+        const double d1 = freeGenes[static_cast<std::size_t>(idx + 1)].r;
+        return d0 + frac * (d1 - d0);
+    };
+
+    const double stepMin = 2.0 * wallGrain_ + 1e-4;
+    const std::vector<double> ys = posicionesFlush(width_, wallGrain_, stepMin);
+
+    std::vector<Obstacle> obstacles;
+    for (double y : ys) {
+        const double depth =
+            std::clamp(profundidadEn(y), wallGrain_, length_ / 2.0 - wallGrain_);
+        const double span = length_ - 2.0 * depth;
+        if (span < 2.0 * wallGrain_) {
+            continue;  // fila degenerada: las dos camaras se tocarian
+        }
+        for (double x : posicionesFlush(span, wallGrain_, stepMin)) {
+            obstacles.push_back({{depth + x, y}, wallGrain_});
+        }
+    }
+    return obstacles;
     return obstacles;
 }

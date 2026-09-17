@@ -16,6 +16,8 @@
 #include "GenerationLogger.hpp"
 #include "GenomeCodec.hpp"
 #include "MutationStrategy.hpp"
+#include "ObstacleConfig.hpp"
+#include "ObstacleGene.hpp"
 #include "Optimizer.hpp"
 #include "OptimizerConfig.hpp"
 #include "PopulationLogger.hpp"
@@ -88,6 +90,20 @@ void printUsage() {
         << "                         (default: no se escribe)\n"
         << "  --population-log-every N\n"
         << "                         Cada cuantas generaciones guardar (default 5)\n"
+        << "  --seed-config ARCHIVO  Arranca la poblacion inicial desde esta config (formato\n"
+        << "                         \"x y R\" por linea, como --config de simulador) en vez de\n"
+        << "                         sampleo aleatorio: el individuo 0 es la config tal cual, el\n"
+        << "                         resto son mutaciones de exploracion a partir de ella.\n"
+        << "                         Solo con --symmetry none, y el archivo debe tener\n"
+        << "                         exactamente --obstacles lineas. Para refinar localmente un\n"
+        << "                         ganador simetrico dejando que se rompa la simetria.\n"
+        << "  --wall-profile N       Activa WallProfileCodec: en vez de K obstaculos, el\n"
+        << "                         genoma son N profundidades de un perfil de muro solido\n"
+        << "                         (rasterizado en circulos chicos) que parte la mesa en dos\n"
+        << "                         camaras, espejado en x y en y. Ignora --symmetry/--obstacles.\n"
+        << "  --wall-depth-min VALOR Profundidad minima del perfil en m (default 0.12)\n"
+        << "  --wall-depth-max VALOR Profundidad maxima del perfil en m (default 0.45)\n"
+        << "  --wall-grain VALOR     Radio (fijo) de los circulos que arman el muro (default 0.02)\n"
         << "  --help                 Muestra esta ayuda\n";
 }
 
@@ -103,8 +119,17 @@ struct CliOptions {
     std::string configOutPath = "mejor_config.txt";
     std::string logPath;
     std::string populationLogPath;
+    std::string seedConfigPath;
     int populationLogEvery = 5;
     int threads = 0;  // 0 = no tocar el default de OpenMP
+
+    // --wall-profile activa WallProfileCodec en vez del switch de --symmetry:
+    // el genoma pasa a ser N profundidades de perfil, no K obstaculos.
+    bool wallProfile = false;
+    int wallControlPoints = 4;
+    double wallDepthMin = 0.12;
+    double wallDepthMax = 0.45;
+    double wallGrain = 0.02;
 };
 
 CliOptions parseArguments(const std::vector<std::string>& args, bool& showHelp) {
@@ -192,6 +217,17 @@ CliOptions parseArguments(const std::vector<std::string>& args, bool& showHelp) 
             options.populationLogPath = takeValue(args, i);
         } else if (flag == "--population-log-every") {
             options.populationLogEvery = std::stoi(takeValue(args, i));
+        } else if (flag == "--seed-config") {
+            options.seedConfigPath = takeValue(args, i);
+        } else if (flag == "--wall-profile") {
+            options.wallProfile = true;
+            options.wallControlPoints = std::stoi(takeValue(args, i));
+        } else if (flag == "--wall-depth-min") {
+            options.wallDepthMin = std::stod(takeValue(args, i));
+        } else if (flag == "--wall-depth-max") {
+            options.wallDepthMax = std::stod(takeValue(args, i));
+        } else if (flag == "--wall-grain") {
+            options.wallGrain = std::stod(takeValue(args, i));
         } else {
             throw std::runtime_error("Flag desconocido: " + flag);
         }
@@ -223,7 +259,7 @@ void writeConfigOut(const std::string& path, const std::vector<Obstacle>& obstac
         throw std::runtime_error("No se pudo abrir --config-out: " + path);
     }
     out << "# Generado por optimizador (busqueda genetica)\n"
-        << "# obstaculos=" << config.obstacleCount << " semilla=" << config.seed
+        << "# obstaculos=" << obstacles.size() << " semilla=" << config.seed
         << " mejor_fitness=" << std::fixed << std::setprecision(6) << bestFitness << '\n';
     out.setf(std::ios::fixed);
     out.precision(6);
@@ -253,7 +289,12 @@ int main(int argc, char** argv) {
         }
 #endif
 
-        std::unique_ptr<GenomeCodec> codec = buildCodec(options.config);
+        std::unique_ptr<GenomeCodec> codec =
+            options.wallProfile
+                ? std::unique_ptr<GenomeCodec>(std::make_unique<WallProfileCodec>(
+                      options.config.length, options.config.width, options.wallControlPoints,
+                      options.wallDepthMin, options.wallDepthMax, options.wallGrain))
+                : buildCodec(options.config);
         auto fitness = std::make_unique<GoalPenalizedFitness>(options.config.targetGoals,
                                                                options.config.alpha);
         auto selection = std::make_unique<TournamentSelection>(options.config.tournamentSize);
@@ -267,6 +308,32 @@ int main(int argc, char** argv) {
 
         Optimizer optimizer(options.config, std::move(codec), std::move(fitness),
                             std::move(selection), std::move(crossover), std::move(mutation));
+
+        if (!options.seedConfigPath.empty()) {
+            if (options.config.symmetry != SymmetryMode::None) {
+                throw std::runtime_error("--seed-config solo esta soportado con --symmetry none: "
+                                         "es la unica donde el genoma es directamente la lista de "
+                                         "obstaculos.");
+            }
+            const std::vector<Obstacle> seedObstacles = loadObstacles(options.seedConfigPath);
+            if (static_cast<int>(seedObstacles.size()) != options.config.obstacleCount) {
+                throw std::runtime_error(
+                    "--seed-config tiene " + std::to_string(seedObstacles.size()) +
+                    " obstaculos, pero --obstacles pide " +
+                    std::to_string(options.config.obstacleCount) + ".");
+            }
+            const std::string error =
+                validateObstacles(seedObstacles, options.config.length, options.config.width);
+            if (!error.empty()) {
+                throw std::runtime_error("--seed-config invalida: " + error);
+            }
+            std::vector<ObstacleGene> seedGenome;
+            seedGenome.reserve(seedObstacles.size());
+            for (const Obstacle& o : seedObstacles) {
+                seedGenome.push_back({o.center.x, o.center.y, o.radius});
+            }
+            optimizer.setSeedGenome(std::move(seedGenome));
+        }
 
         std::unique_ptr<GenerationLogger> logger;
         if (!options.logPath.empty()) {
@@ -291,7 +358,7 @@ int main(int argc, char** argv) {
                   << "mejor_fitness=" << best.fitness << '\n'
                   << "generaciones=" << options.config.generations << '\n'
                   << "poblacion=" << options.config.populationSize << '\n'
-                  << "obstaculos=" << options.config.obstacleCount << '\n';
+                  << "obstaculos=" << bestObstacles.size() << '\n';
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';

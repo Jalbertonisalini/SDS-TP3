@@ -61,9 +61,24 @@ def correr_ga(k, semilla, args, forzar):
         "--config-out", str(config_out),
         "--log", str(log_out),
     ]
-    proceso = subprocess.run(comando, capture_output=True, text=True)
+    if args.max_radius is not None:
+        comando += ["--max-radius", str(args.max_radius)]
+    if args.mutation_gene_rate is not None:
+        comando += ["--mutation-gene-rate", str(args.mutation_gene_rate)]
+    if args.elitism is not None:
+        comando += ["--elitism", str(args.elitism)]
+    if args.threads is not None:
+        comando += ["--threads", str(args.threads)]
+    if getattr(args, "population_log", False):
+        poblacion_out = caso / "poblacion"
+        poblacion_out.mkdir(parents=True, exist_ok=True)
+        comando += ["--population-log", str(poblacion_out),
+                    "--population-log-every", str(args.population_log_every)]
+    # stdout se captura (ahi va el resumen parseable); stderr se hereda tal
+    # cual para ver el progreso generacion a generacion en vivo, en foreground.
+    proceso = subprocess.run(comando, stdout=subprocess.PIPE, text=True)
     if proceso.returncode != 0:
-        print(f"  FALLO K{k}_s{semilla}: {proceso.stderr.strip()}", file=sys.stderr)
+        print(f"  FALLO K{k}_s{semilla} (ver el error mas arriba)", file=sys.stderr)
         return None
 
     sidecar.write_text(proceso.stdout)
@@ -75,9 +90,15 @@ def barrido_obstaculos(args):
     directorio = config.RESULTADOS / "genetico" / args.symmetry
     filas = []
 
+    total = len(args.valores) * args.realizaciones
+    hecho = 0
+
     for k in args.valores:
         for i in range(args.realizaciones):
             semilla = config.SEMILLA_BASE + i
+            hecho += 1
+            print(f"\n=== [{hecho}/{total}] K={k} semilla={semilla} ===", flush=True)
+
             resumen = correr_ga(k, semilla, args, args.forzar)
             if resumen is None:
                 continue
@@ -87,6 +108,8 @@ def barrido_obstaculos(args):
                 "mejor_fitness": resumen["mejor_fitness"],
                 "tiempo_ejecucion_s": resumen["tiempo_ejecucion_s"],
             })
+
+    print(f"\n=== Barrido completo: {hecho}/{total} casos procesados ===")
 
     run.escribir_resumen(
         directorio,
@@ -111,6 +134,21 @@ def construir_parser():
     parser.add_argument("--generations", type=int, default=100, help="Generaciones (default 100)")
     parser.add_argument("--seeds-per-gen", type=int, default=5,
                         help="Semillas comunes por generacion (default 5)")
+    parser.add_argument("--max-radius", type=float, default=None,
+                        help="Radio maximo de obstaculo en m (default: el del optimizador, 0.25)")
+    parser.add_argument("--mutation-gene-rate", type=float, default=None, dest="mutation_gene_rate",
+                        help="Prob. de mutar cada gen (default: el del optimizador, 0.3)")
+    parser.add_argument("--elitism", type=int, default=None,
+                        help="Individuos que pasan sin cambios a la siguiente generacion (default: el del optimizador, 2)")
+    parser.add_argument("--threads", type=int, default=None,
+                        help="Hilos OpenMP por corrida (default: todos los disponibles)")
+    parser.add_argument("--population-log", action="store_true", dest="population_log",
+                        help="Guarda la poblacion completa de cada corrida (para animar la "
+                             "convergencia con plot/snapshots_poblacion.py o "
+                             "plot/convergencia_poblacion.py). Pensado para pocas corridas "
+                             "puntuales, no para un barrido grande")
+    parser.add_argument("--population-log-every", type=int, default=5, dest="population_log_every",
+                        help="Cada cuantas generaciones guardar la poblacion (default 5)")
     return parser
 
 

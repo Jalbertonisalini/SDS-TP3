@@ -32,7 +32,8 @@ std::vector<ObstacleGene> BlxAlphaCrossover::cross(const std::vector<ObstacleGen
 
         for (std::size_t i = 0; i < parentA.size(); ++i) {
             ObstacleGene gene;
-            gene.r = blend(parentA[i].r, parentB[i].r, codec.minRadius(), codec.maxRadius(), rng);
+            gene.r = blend(parentA[i].r, parentB[i].r, codec.minRadius(),
+                           codec.radiusCeiling(static_cast<int>(i)), rng);
             const PositionBounds pos = codec.positionBounds(static_cast<int>(i), gene.r);
             gene.x = blend(parentA[i].x, parentB[i].x, pos.xMin, pos.xMax, rng);
             gene.y = blend(parentA[i].y, parentB[i].y, pos.yMin, pos.yMax, rng);

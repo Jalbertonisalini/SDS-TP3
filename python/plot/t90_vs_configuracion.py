@@ -2,6 +2,9 @@
 
     python plot/t90_vs_configuracion.py --salida ../entrega/1.2/t90_vs_config.png
 
+Ademas de la media +/- desvio, anota el valor numerico (con las cifras
+significativas del desvio) arriba de cada punto.
+
 Las configuraciones que no llegan al 90% de particulas usadas dentro de t_max
 se marcan aparte: el motor devuelve t90 negativo en ese caso.
 """
@@ -15,8 +18,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
+import estilo
 
 
 def main():
@@ -49,18 +54,25 @@ def main():
     else:
         agrupado = agrupado.sort_values("mean")
 
-    fig, ax = plt.subplots(figsize=config.TAM_FIG)
-    ax.errorbar(agrupado["configuracion"], agrupado["mean"], yerr=agrupado["std"].fillna(0.0),
-                marker="o", capsize=4, linestyle="none")
-    ax.set_xlabel("Configuracion de obstaculos", fontsize=config.FUENTE)
-    ax.set_ylabel("Tiempo hasta el 90% de usadas (s)", fontsize=config.FUENTE)
-    ax.tick_params(labelsize=config.FUENTE)
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
+    posiciones = list(range(len(agrupado)))
 
-    args.salida.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(args.salida, dpi=config.DPI)
-    print(f"Figura guardada en {args.salida}")
+    fig, ax = estilo.nueva_figura()
+    ax.errorbar(posiciones, agrupado["mean"], yerr=agrupado["std"].fillna(0.0),
+                marker="o", capsize=4, linestyle="none", color="tab:orange", markersize=8,
+                linewidth=2)
+    for pos, fila in zip(posiciones, agrupado.itertuples()):
+        desvio = fila.std if fila.std == fila.std else 0.0  # NaN-safe (1 sola realizacion)
+        etiqueta = f"{fila.mean:.2f} ± {desvio:.2f}"
+        # Ancla arriba de la punta de la barra de error (mean + desvio), no
+        # del punto medio, para que el numero no quede pisando la barra.
+        ax.annotate(etiqueta, (pos, fila.mean + desvio), textcoords="offset points",
+                   xytext=(0, 14), ha="center", va="bottom", fontsize=config.FUENTE * 0.7)
+    ax.margins(y=0.18)  # aire arriba para las anotaciones, si no quedan pegadas al borde
+    ax.set_xticks(posiciones)
+    ax.set_xticklabels(agrupado["configuracion"])
+    estilo.etiquetar_ejes(ax, "Configuracion de obstaculos", "t90 (s)")
+
+    estilo.guardar(fig, args.salida)
     print(agrupado.to_string(index=False))
     return 0
 

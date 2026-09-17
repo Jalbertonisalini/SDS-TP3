@@ -10,6 +10,7 @@
 #include "GenomeCodec.hpp"
 #include "Individual.hpp"
 #include "MutationStrategy.hpp"
+#include "ObstacleGene.hpp"
 #include "OptimizerConfig.hpp"
 #include "PopulationLogger.hpp"
 #include "SelectionStrategy.hpp"
@@ -36,6 +37,17 @@ public:
     // grande.
     Individual run(GenerationLogger* logger = nullptr, PopulationLogger* populationLogger = nullptr);
 
+    // Si se setea, la poblacion inicial arranca de este genoma (el individuo
+    // 0 sin mutar, el resto con una mutacion de exploracion aplicada) en vez
+    // de sampleo aleatorio puro -- refinamiento local alrededor de una config
+    // ya conocida, en vez de buscar desde cero. Pensado para romper simetria
+    // localmente: arrancar de un ganador simetrico y dejar que --symmetry
+    // none lo perturbe libremente a ver si una version asimetrica mejora.
+    // El genoma debe ser compatible con el codec (mismo tamano que
+    // codec().freeCount()); con IdentityCodec eso es simplemente la lista de
+    // obstaculos tal cual.
+    void setSeedGenome(std::vector<ObstacleGene> genome) { seedGenome_ = std::move(genome); }
+
     const GenomeCodec& codec() const { return *codec_; }
 
 private:
@@ -44,6 +56,7 @@ private:
                               const std::vector<unsigned long>& seeds) const;
 
     OptimizerConfig config_;
+    std::vector<ObstacleGene> seedGenome_;
     std::unique_ptr<GenomeCodec> codec_;
     std::unique_ptr<FitnessFunction> fitness_;
     std::unique_ptr<SelectionStrategy> selection_;

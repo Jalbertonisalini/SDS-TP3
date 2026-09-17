@@ -53,6 +53,10 @@ void PopulationLogger::log(int generation, const std::vector<Individual>& popula
         }
     }
 
-    std::cout << "[offsprings] gen " << generation << "  mejor=" << std::fixed
+    // stderr, no stdout: stdout es solo para el resumen "clave=valor" final
+    // que parsea run.py/genetico.py (ver Optimizer.cpp, que ya usa cerr para
+    // el progreso por generacion). Con --population-log activo, esta linea
+    // en stdout contaminaba ese resumen y rompia run.parsear_resumen.
+    std::cerr << "[offsprings] gen " << generation << "  mejor=" << std::fixed
                << std::setprecision(3) << best << "  -> " << path << '\n';
 }

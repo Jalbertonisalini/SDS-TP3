@@ -4,10 +4,11 @@
         --log ../build/resultados/genetico/K4_s1001/log.csv \
         --salida output/convergencia_k4.png
 
-Grafica el mejor fitness de la generacion (linea) y la banda entre el
-promedio y el peor, para ver de un vistazo si la poblacion converge o si
-sigue diversa hasta el final. El fitness es t90 en segundos (o la
-penalizacion si no se llego a Fu=0.90), asi que "menor es mejor".
+Grafica el fitness promedio de la poblacion por generacion (linea), con una
+banda sombreada de +/- 1 desvio estandar (dispersion real de la poblacion
+en esa generacion, no el rango mejor-peor que exagera outliers). El fitness
+es t90 en segundos (o la penalizacion si no se llego a Fu=0.90), asi que
+"menor es mejor".
 """
 
 import argparse
@@ -28,7 +29,7 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--log", type=Path, required=True,
                         help="CSV de convergencia (generacion,mejor_fitness,promedio_fitness,"
-                             "peor_fitness,tiempo_s), lo escribe optimizador --log")
+                             "desvio_fitness,peor_fitness,tiempo_s), lo escribe optimizador --log")
     parser.add_argument("--salida", type=Path, required=True, help="Archivo PNG de salida")
     args = parser.parse_args()
 
@@ -37,16 +38,20 @@ def main():
         return 1
 
     datos = pd.read_csv(args.log)
+    if "desvio_fitness" not in datos.columns:
+        sys.exit("El log no tiene desvio_fitness -- recompila el optimizador y volve a correr "
+                 "esta corrida del GA (el logger viejo no calculaba el desvio).")
+
+    inferior = datos["promedio_fitness"] - datos["desvio_fitness"]
+    superior = datos["promedio_fitness"] + datos["desvio_fitness"]
 
     fig, ax = plt.subplots(figsize=config.TAM_FIG)
-    ax.fill_between(datos["generacion"], datos["mejor_fitness"], datos["peor_fitness"],
-                    alpha=0.15, color="tab:blue", label="rango mejor-peor")
-    ax.plot(datos["generacion"], datos["promedio_fitness"], linestyle="--", color="tab:orange",
-            label="promedio de la poblacion")
-    ax.plot(datos["generacion"], datos["mejor_fitness"], color="tab:blue", linewidth=2,
-            label="mejor individuo")
+    ax.fill_between(datos["generacion"], inferior, superior,
+                    alpha=0.2, color="tab:orange", label="promedio +/- 1 desvio")
+    ax.plot(datos["generacion"], datos["promedio_fitness"], color="tab:orange", linewidth=2,
+            label="fitness promedio de la poblacion")
     ax.set_xlabel("Generacion", fontsize=config.FUENTE)
-    ax.set_ylabel("Fitness (t90 en s, o penalizacion)", fontsize=config.FUENTE)
+    ax.set_ylabel("Fitness", fontsize=config.FUENTE)
     ax.tick_params(labelsize=config.FUENTE)
     ax.legend(loc="best", fontsize=config.FUENTE)
     ax.grid(alpha=0.3)

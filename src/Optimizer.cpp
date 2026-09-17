@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <iomanip>
+#include <iostream>
 #include <limits>
 #include <stdexcept>
 
@@ -38,21 +41,46 @@ Optimizer::Optimizer(OptimizerConfig config, std::unique_ptr<GenomeCodec> codec,
       mutation_(std::move(mutation)) {}
 
 Individual Optimizer::randomIndividual(std::mt19937_64& rng) const {
-    constexpr int maxAttempts = 10000;
+    // Sampler secuencial: coloca un gen a la vez y lo valida contra lo ya
+    // puesto (no contra el genoma completo, todavia inexistente), igual que
+    // SimulationEngine::placeParticlesRandom hace con las particulas. Muchisimo
+    // mas eficiente que tirar los freeCount genes juntos y descartar todo el
+    // individuo si cualquiera de ellos choca -- esa version (sample-then-reject
+    // en bloque) es la que dejaba a K=21 sin poder generar ni un individuo en
+    // 10000 intentos: con 5 genes de cuadrante compitiendo por lugar, la
+    // chance de que los 5 caigan bien a la vez es minuscula aunque sobre area.
+    constexpr int maxAttemptsPerGene = 2000;
+    constexpr int maxRestarts = 200;
     const int freeCount = codec_->freeCount();
 
-    for (int attempt = 0; attempt < maxAttempts; ++attempt) {
-        std::vector<ObstacleGene> genome(static_cast<std::size_t>(freeCount));
+    for (int restart = 0; restart < maxRestarts; ++restart) {
+        std::vector<ObstacleGene> genome;
+        genome.reserve(static_cast<std::size_t>(freeCount));
+        bool stuck = false;
+
         for (int i = 0; i < freeCount; ++i) {
-            const double r = sampleInBounds(codec_->minRadius(), codec_->maxRadius(), rng);
-            const PositionBounds pos = codec_->positionBounds(i, r);
-            genome[static_cast<std::size_t>(i)] = {
-                sampleInBounds(pos.xMin, pos.xMax, rng),
-                sampleInBounds(pos.yMin, pos.yMax, rng),
-                r,
-            };
+            bool placed = false;
+            for (int attempt = 0; attempt < maxAttemptsPerGene; ++attempt) {
+                const double r = sampleInBounds(codec_->minRadius(), codec_->radiusCeiling(i), rng);
+                const PositionBounds pos = codec_->positionBounds(i, r);
+                genome.push_back({
+                    sampleInBounds(pos.xMin, pos.xMax, rng),
+                    sampleInBounds(pos.yMin, pos.yMax, rng),
+                    r,
+                });
+                if (isValidCandidate(codec_->expand(genome), config_)) {
+                    placed = true;
+                    break;
+                }
+                genome.pop_back();
+            }
+            if (!placed) {
+                stuck = true;
+                break;
+            }
         }
-        if (isValidCandidate(codec_->expand(genome), config_)) {
+
+        if (!stuck) {
             return {genome, std::numeric_limits<double>::infinity()};
         }
     }
@@ -99,13 +127,27 @@ double Optimizer::evaluateIndividual(const std::vector<ObstacleGene>& genome,
 
 Individual Optimizer::run(GenerationLogger* logger, PopulationLogger* populationLogger) {
     const auto start = std::chrono::steady_clock::now();
+    std::cerr << std::fixed << std::setprecision(3);
 
     std::mt19937_64 masterRng(config_.seed);
 
     std::vector<Individual> population;
     population.reserve(static_cast<std::size_t>(config_.populationSize));
-    for (int i = 0; i < config_.populationSize; ++i) {
-        population.push_back(randomIndividual(masterRng));
+    if (!seedGenome_.empty()) {
+        // Poblacion inicial ancla en seedGenome_: el individuo 0 queda tal
+        // cual (referencia exacta), el resto son mutaciones de exploracion
+        // (progress=0 => sigma grande) a partir de esa misma base, para
+        // explorar el entorno del seed en vez de partir de cero.
+        population.push_back({seedGenome_, std::numeric_limits<double>::infinity()});
+        for (int i = 1; i < config_.populationSize; ++i) {
+            std::vector<ObstacleGene> genome = seedGenome_;
+            mutation_->mutate(genome, *codec_, /*progress=*/0.0, masterRng);
+            population.push_back({std::move(genome), std::numeric_limits<double>::infinity()});
+        }
+    } else {
+        for (int i = 0; i < config_.populationSize; ++i) {
+            population.push_back(randomIndividual(masterRng));
+        }
     }
 
     Individual best;
@@ -125,9 +167,11 @@ Individual Optimizer::run(GenerationLogger* logger, PopulationLogger* population
         });
 
         double sum = 0.0;
+        double sumSq = 0.0;
         double worst = -std::numeric_limits<double>::infinity();
         for (const Individual& individual : population) {
             sum += individual.fitness;
+            sumSq += individual.fitness * individual.fitness;
             worst = std::max(worst, individual.fitness);
             if (individual.fitness < best.fitness) {
                 best = individual;
@@ -138,16 +182,25 @@ Individual Optimizer::run(GenerationLogger* logger, PopulationLogger* population
             populationLogger->log(generation, population, *codec_);
         }
 
+        const double elapsed =
+            std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        std::sort(population.begin(), population.end(),
+                 [](const Individual& a, const Individual& b) { return a.fitness < b.fitness; });
+        const double n = static_cast<double>(population.size());
+        const double mean = sum / n;
+        const double variance = std::max(0.0, sumSq / n - mean * mean);
+
+        // A stderr (no stdout: ahi solo va el resumen final que parsean los
+        // scripts) para poder seguir el progreso en foreground con `tail -f`
+        // o simplemente mirando la terminal, sin ensuciar el output parseable.
+        std::cerr << "  [gen " << (generation + 1) << "/" << config_.generations << "] "
+                  << "mejor=" << population.front().fitness << " promedio=" << mean
+                  << " desvio=" << std::sqrt(variance) << " peor=" << worst
+                  << " t=" << elapsed << "s\n";
+
         if (logger != nullptr) {
-            const double elapsed =
-                std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
-            std::sort(population.begin(), population.end(),
-                     [](const Individual& a, const Individual& b) { return a.fitness < b.fitness; });
-            logger->log(generation, population.front().fitness,
-                       sum / static_cast<double>(population.size()), worst, elapsed);
-        } else {
-            std::sort(population.begin(), population.end(),
-                     [](const Individual& a, const Individual& b) { return a.fitness < b.fitness; });
+            logger->log(generation, population.front().fitness, mean, std::sqrt(variance), worst,
+                       elapsed);
         }
 
         if (generation + 1 == config_.generations) {
