@@ -3,6 +3,11 @@
     python plot/tiempo_ejecucion_vs_n_combined.py --salida ../entrega/1.1/tiempo_vs_n_combined.png
 
 Compara la escalabilidad del barrido aleatorio (azul) con el hexagonal (verde).
+
+El eje vertical va en escala logaritmica: el tiempo cubre casi cinco ordenes de
+magnitud (de 5 ms en N = 50 a 540 s en N = 700), asi que en escala lineal la
+curva aleatoria queda aplastada contra el cero y no se puede ver que las dos
+colocaciones coinciden en la zona de solape, que es lo que la figura compara.
 """
 
 import argparse
@@ -44,11 +49,14 @@ def main():
         ax.errorbar(agrupado["N"], agrupado["mean"], yerr=agrupado["std"].fillna(0.0),
                     marker=marker, capsize=4, linestyle="-", color=color, label=label)
 
+    # Solo el eje y va en log: el rango de N es poco mas de una decada, asi que
+    # un eje x logaritmico no aporta y ademas deja casi sin rotular el eje.
+    ax.set_yscale("log")
     ax.set_xlabel("Cantidad de part\u00edculas", fontsize=config.FUENTE)
     ax.set_ylabel("Tiempo de ejecuci\u00f3n (s)", fontsize=config.FUENTE)
     ax.tick_params(labelsize=config.FUENTE)
     ax.legend(fontsize=config.FUENTE)
-    ax.grid(alpha=0.3)
+    ax.grid(alpha=0.3, which="both")
     fig.tight_layout()
 
     args.salida.parent.mkdir(parents=True, exist_ok=True)
