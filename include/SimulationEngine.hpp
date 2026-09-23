@@ -5,28 +5,34 @@
 
 #include "Config.hpp"
 #include "Event.hpp"
+#include "GoalEvent.hpp"
 #include "OutputWriter.hpp"
 #include "Particle.hpp"
 
 // Dinamica molecular dirigida por eventos para el problema del billar-metegol.
 // Entre colisiones las particulas se mueven en linea recta a velocidad constante;
 // todas las colisiones son elasticas.
+//
+// El motor solo evoluciona el estado y lo entrega: no calcula observables.
+// F_u, t90, DCM, etc. se calculan en postproceso a partir de su salida.
 class SimulationEngine {
 public:
     explicit SimulationEngine(const Config& config);
 
-    // Corre la simulacion completa y va volcando el estado cada
-    // config.eventsPerSample eventos. No hace I/O de inicializacion.
+    // Corre la simulacion completa: vuelca el estado de las particulas cada
+    // config.eventsPerSample eventos y, al final, el registro de goles.
     void run(OutputWriter& writer);
 
-    // Metricas de la corrida, disponibles despues de run().
+    // Igual que run(), pero sin OutputWriter: corre exclusivamente en memoria
+    // y devuelve el registro de goles. Pensada para evaluaciones masivas
+    // (p.ej. busqueda genetica); el fitness se calcula afuera del motor.
+    std::vector<GoalEvent> runSilent();
+
+    // Metricas de rendimiento de la corrida (no son observables fisicos),
+    // disponibles despues de run().
     double wallClockSeconds() const { return wallClockSeconds_; }
     long processedEvents() const { return processedEvents_; }
-    int goals() const { return goals_; }
     double finalTime() const { return time_; }
-
-    // Tiempo en que F_u alcanzo 0.9; negativo si nunca lo alcanzo.
-    double timeToNinetyPercent() const { return timeToNinety_; }
 
 private:
     void placeParticles();
@@ -50,16 +56,18 @@ private:
     void resolveVerticalWall(int i);
     void resolveHorizontalWall(int i);
 
-    double meanSquaredDisplacement() const;
-    void sample(OutputWriter& writer);
+    void sample(OutputWriter* writer);
+
+    // Bucle de eventos compartido por run() y runSilent(). writer == nullptr
+    // significa "sin I/O": sample() no se llama en ningun punto.
+    void runLoop(OutputWriter* writer);
 
     Config config_;
     std::vector<Particle> particles_;
     std::priority_queue<Event> queue_;
 
     double time_ = 0.0;
-    int goals_ = 0;
-    double timeToNinety_ = -1.0;
+    std::vector<GoalEvent> goalEvents_;
     long processedEvents_ = 0;
     double wallClockSeconds_ = 0.0;
 };

@@ -66,11 +66,11 @@
 
       % OJO: estos rangos estan hardcodeados. Si se agregan o quitan
       % diapositivas hay que actualizarlos.
-      \dgrp{3}{4}{Intro.}
-      \dgrp{5}{6}{Impl.}
-      \dgrp{7}{8}{Sim.}
-      \dgrp{9}{13}{Resultados}
-      \dgrp{14}{15}{Conc.}
+      \dgrp{2}{5}{Intro.}
+      \dgrp{6}{7}{Impl.}
+      \dgrp{8}{15}{Sim.}
+      \dgrp{16}{21}{Resultados}
+      \dgrp{22}{23}{Conc.}
     \end{tikzpicture}
   \end{beamercolorbox}
 }
@@ -174,33 +174,88 @@
   \titlepage
 \end{frame}
 
-% --- Frame 2: Indice ---
-\begin{frame}{Contenidos}
-  \tableofcontents
-\end{frame}
-
 \seccion{Introducción}
 
 \section{Introducción}
 
 \begin{frame}{El sistema}
   \begin{itemize}
-    \setlength{\itemsep}{1em}
-    \item Mesa rectangular de $L = 1.20$ m por $W = 0.68$ m, con un arco de
-      $d = 0.20$ m en el centro de cada pared corta.
-    \item $N$ partículas en movimiento rectilíneo uniforme entre colisiones
-      elásticas, con obstáculos circulares fijos de masa infinita.
-    \item Una partícula fresca se vuelve usada al tocar por primera vez un arco.
+    \setlength{\itemsep}{1.2em}
+    \item Mesa de metegol con un arco en cada pared corta
+    \item Obstáculos fijos que guían a las pelotas hacia los arcos
+    \item $N$ esferas rígidas idénticas (masa $m_i$, radio $R_i$)
+    \item Sin fuerzas de largo alcance ni rozamiento
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Objetivo}
+\begin{frame}{Modelo matemático: partículas}
+  \small
+  \setlength{\abovedisplayskip}{3pt}
+  \setlength{\belowdisplayskip}{3pt}
+  \setlength{\abovedisplayshortskip}{3pt}
+  \setlength{\belowdisplayshortskip}{3pt}
   \begin{itemize}
     \setlength{\itemsep}{1em}
-    \item $F_u(t) = N_g(t)/N$: fracción de partículas usadas.
-    \item $t_{90}$: instante en que $F_u$ alcanza $0.9$.
-    \item Encontrar y justificar la configuración de obstáculos que minimiza
-      $\langle t_{90}\rangle$.
+    \item Vuelo libre de las partículas:
+      \[
+        x_i(t) = x_i(0) + v_{x_i}\,t, \qquad
+        y_i(t) = y_i(0) + v_{y_i}\,t
+      \]
+    \item Colisión elástica $i$--$j$
+      ($\sigma = R_i + R_j$;
+      $\Delta\mathbf{v} = \mathbf{v}_j - \mathbf{v}_i$,
+      $\Delta\mathbf{r} = \mathbf{r}_j - \mathbf{r}_i$):
+      \smallskip
+      \[
+        J = \frac{2\,m_i m_j\,
+            (\Delta\mathbf{v} \cdot \Delta\mathbf{r})}
+            {\sigma\,(m_i + m_j)}
+      \]
+    \item Actualización post-choque:
+      \begin{align*}
+        vx_i^{d} &= vx_i^{a} + J_x/m_i, \qquad &
+        vx_j^{d} &= vx_j^{a} - J_x/m_j, \\
+        vy_i^{d} &= vy_i^{a} + J_y/m_i, \qquad &
+        vy_j^{d} &= vy_j^{a} - J_y/m_j.
+      \end{align*}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Modelo matemático: contorno}
+  \small
+  \setlength{\abovedisplayskip}{3pt}
+  \setlength{\belowdisplayskip}{3pt}
+  \setlength{\abovedisplayshortskip}{3pt}
+  \setlength{\belowdisplayshortskip}{3pt}
+  \begin{itemize}
+    \setlength{\itemsep}{1.2em}
+    \item Pared u obstáculo fijo ($m \to \infty$), colisión elástica:
+      \[
+        vx_i^{d} = -vx_i^{a} \quad \text{(pared vertical)}, \qquad
+        vy_i^{d} = -vy_i^{a} \quad \text{(pared horizontal)}.
+      \]
+    \item Obstáculo circular fijo ($m \to \infty$), colisión elástica
+      ($c_n = c_t = 1$):
+      \smallskip
+      \[
+        \mathbf{\hat{e}}_n = (\cos\alpha, \sin\alpha), \qquad
+        \mathbf{\hat{e}}_t = (-\sin\alpha, \cos\alpha)
+      \]
+      \medskip
+      \[
+        \mathbf{v}^d = \mathbf{R}(-\alpha)\, \mathbf{S}(c_n, c_t)\,
+            \mathbf{R}(\alpha)\, \mathbf{v}^a
+      \]
+      \medskip
+      \[
+        \mathbf{R}(\alpha)
+          = \begin{pmatrix}
+              \cos\alpha & \sin\alpha \\
+              -\sin\alpha & \cos\alpha
+            \end{pmatrix}, \qquad
+        \mathbf{S}(c_n, c_t)
+          = \begin{pmatrix} -c_n & 0 \\ 0 & c_t \end{pmatrix}
+      \]
   \end{itemize}
 \end{frame}
 
@@ -212,33 +267,125 @@
   % TODO: diagrama del ciclo predecir-avanzar-resolver-reagendar.
 \end{frame}
 
-\begin{frame}{Ecuaciones}
-  \Large
-  % TODO: tiempo de colisión entre discos e impulso elástico.
-\end{frame}
-
 \seccion{Simulaciones}
 
 \section{Simulaciones}
 
-\begin{frame}{Parámetros del estudio}
-  % Las condiciones de simulación se enuncian UNA sola vez, acá. En las
-  % diapositivas de figuras solo se repite el parámetro libre, con \libre.
+\begin{frame}{Geometría del sistema}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.55\textwidth}
+      \begin{itemize}
+        \setlength{\itemsep}{0.6em}
+        \item Mesa billar--metegol: $L \times W = 1.20 \times 0.68$ m.
+        \item Arco: largo $d = 0.20$ m en cada pared corta.
+        \item $N$ partículas idénticas: radio $r = 0.0175$ m, masa
+          $m = 0.025$ kg.
+        \item Rapidez inicial $v_0 = 1$ m/s.
+        \item Obstáculos circulares fijos: opcionales.
+      \end{itemize}
+
+    \column{0.45\textwidth}
+      \hfill
+      \begin{tikzpicture}[x=4.3cm,y=4.3cm]
+        \fill[black!6] (0,0) rectangle (1.2,0.68);
+        \draw[thick] (0,0) rectangle (1.2,0.68);
+        \draw[red!70!black,line width=2.2pt]
+          (0,0.24) -- (0,0.44)  (1.2,0.24) -- (1.2,0.44);
+        \fill[black!60]
+          (0.55,0.15) circle(0.05)
+          (0.55,0.53) circle(0.05)
+          (0.80,0.34) circle(0.05);
+        \foreach \x/\y/\ang in {0.10/0.08/60, 0.18/0.58/150, 0.32/0.42/210, 0.40/0.15/20, 0.26/0.26/300, 0.66/0.12/140, 0.76/0.50/200, 0.98/0.34/10, 0.05/0.34/80}
+          {%
+            \fill[blue!70!black] (\x,\y) circle(2.4pt);
+            \draw[->,blue!70!black] (\x,\y) -- ++(\ang:0.075);
+          }
+      \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Observables}
+  \begin{itemize}
+    \setlength{\itemsep}{0.9em}
+    \item $N_g(t)$: partículas que ya atravesaron un arco.
+    \item $F_u(t) = N_g(t)/N$: fracción de partículas usadas.
+    \item $t_{90}$: primer instante con $F_u(t) \ge 0.9$.
+    \item $\mathrm{DCM}(t)$: desplazamiento cuadrático medio
+      \[
+        \mathrm{DCM}(t) = \frac{1}{N}\sum_{i=1}^{N}
+          \left|\mathbf{r}_i(t) - \mathbf{r}_i(0)\right|^2
+          \;\approx\; 4\,D\,t,
+      \]
+      con $D$ el coeficiente de difusión, ajustado en el tramo lineal.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Configuraciones estudiadas}
   \begin{center}
-    \begin{tabular}{@{}lc@{}}
+    \begin{tabular}{@{}llll@{}}
       \toprule
-      Parámetro & Valor \\
+      Configuración & Obstáculos & Método & Se barre \\
       \midrule
-      $N$ & 100 \\
-      $v_0$ & 1 m/s \\
-      $r$ & 0.0175 m \\
-      $m$ & 0.025 kg \\
-      $L \times W$ & $1.20 \times 0.68$ m \\
-      $d$ & 0.20 m \\
-      $t_{max}$ & 100 s \\
+      Mesa vacía        & ninguno              & baseline          & --- \\
+      Círculo           & 1, centrado          & barrido exhaustivo & radio $R$ \\
+      Quad              & $K$ c. simetría quad & Algoritmo genético (GA) & $K \in \{5,9,13,17\}$ \\
+      Pared             & pared de círculos    & Algoritmo genético (GA) & grano, perfil \\
       \bottomrule
     \end{tabular}
   \end{center}
+\end{frame}
+
+\begin{frame}{Configuraciones sin GA}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.5\textwidth}
+      \hfill
+      \resizebox{\columnwidth}{!}{%
+        \begin{tikzpicture}[x=3.9cm,y=3.9cm]
+          \fill[black!6] (0,0) rectangle (1.2,0.68);
+          \draw[thick] (0,0) rectangle (1.2,0.68);
+          \draw[red!70!black,line width=2.2pt]
+            (0,0.24) -- (0,0.44)  (1.2,0.24) -- (1.2,0.44);
+          \foreach \x/\y/\ang in {0.10/0.08/60, 0.18/0.58/150, 0.32/0.42/210, 0.40/0.15/20, 0.26/0.26/300, 0.66/0.12/140, 0.76/0.50/200, 0.98/0.34/10, 0.05/0.34/80}
+            {%
+              \fill[blue!70!black] (\x,\y) circle(2.4pt);
+              \draw[->,blue!70!black] (\x,\y) -- ++(\ang:0.075);
+            }
+        \end{tikzpicture}}
+      \begin{center}{\small Mesa vacía}\end{center}
+
+    \column{0.5\textwidth}
+      \hfill
+      \includegraphics[width=\columnwidth]{entrega/1.2/circulo_mejor_caso_frame.png}
+      \begin{center}{\small Círculo gigante}\end{center}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Configuraciones con GA}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.5\textwidth}
+      \begin{center}
+        {\small Quad}\\[0.2em]
+        \includegraphics[width=\columnwidth]{entrega/1.2/quad_geometrias.png}
+      \end{center}
+
+    \column{0.5\textwidth}
+      \begin{center}
+        {\small Pared de círculos}\\[0.2em]
+        \includegraphics[width=\columnwidth]{entrega/1.2/pared_geometrias.png}
+      \end{center}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{GA: genes e hiperparámetros}
+  \begin{itemize}\small
+    \setlength{\itemsep}{0.5em}
+    \item El GA modifica (genes): pos.~$(x,y)$ y radio de los obstáculos
+      (quad); profundidades del perfil del muro (pared).
+    \item Hiperparámetros fijos: $K$, pobl.~48, gen.~60 (quad); grano,
+      perfil, pobl.~64, gen.~150 (pared).
+    \item Fitness: minimizar $\tilde{t}_{90}$ (5 semillas/gen.); validación
+      final con 100 corridas.
+  \end{itemize}
 \end{frame}
 
 \begin{frame}{Animaciones}

@@ -138,14 +138,21 @@ def main():
     parser.add_argument("--interpolar", action="store_true",
                         help="Con --dt-cuadro, avanza cada particula en vuelo libre desde el "
                              "ultimo estado guardado. Requiere correr el motor con --cada-eventos 1")
+    parser.add_argument("--duracion-max", type=float, default=None,
+                        help="Corta el video a como maximo estos segundos de tiempo SIMULADO "
+                             "(con --fps/--dt-cuadro por default, 1 s de video = 1 s simulado, "
+                             "asi que tambien acota la duracion real del mp4). Pensado para no "
+                             "hacer mirar 100 s de particulas rezagadas cuando lo interesante ya "
+                             "paso en los primeros t90 segundos")
     args = parser.parse_args()
 
     datos = pd.read_csv(args.trayectoria)
     obstaculos = leer_obstaculos(args.obstaculos)
     instantes = sorted(datos["Time"].unique())
+    tope = (instantes[0] + args.duracion_max) if args.duracion_max is not None else instantes[-1]
 
     if args.fotograma:
-        objetivo = args.instante if args.instante is not None else instantes[-1]
+        objetivo = args.instante if args.instante is not None else tope
         cuadro = datos[datos["Time"] == min(instantes, key=lambda t: abs(t - objetivo))]
         fig, ax = plt.subplots(figsize=(10, 10 * config.ANCHO / config.LARGO))
         dibujar_mesa(ax, obstaculos)
@@ -173,6 +180,9 @@ def main():
     instantes, matrices = estados_por_instante(datos)
     estados = matrices["State"]
     tiempos, indices = tiempos_de_cuadros(instantes, args.dt_cuadro)
+    if args.duracion_max is not None:
+        mascara = tiempos <= tope
+        tiempos, indices = tiempos[mascara], indices[mascara]
     t90 = calcular_t90(instantes, estados)
 
     circulos = [Circle((0, 0), config.RADIO, color=COLORES[0]) for _ in range(estados.shape[1])]
@@ -192,7 +202,10 @@ def main():
     # Sin blit: el titulo queda fuera de los ejes y blit no lo redibujaria.
     anim = animation.FuncAnimation(fig, actualizar, frames=len(tiempos), blit=False)
     args.salida.parent.mkdir(parents=True, exist_ok=True)
-    escritor = animation.FFMpegWriter(fps=args.fps, codec="libx264", bitrate=6000)
+    # -pix_fmt yuv420p: sin esto libx264 codifica en yuv444p (perfil "High
+    # 4:4:4"), que Windows/VLC reproducen pero QuickTime no reconoce.
+    escritor = animation.FFMpegWriter(fps=args.fps, codec="libx264", bitrate=6000,
+                                      extra_args=["-pix_fmt", "yuv420p"])
     anim.save(str(args.salida), writer=escritor, dpi=100)
     print(f"Animacion guardada en {args.salida}")
     return 0

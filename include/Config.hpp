@@ -24,15 +24,18 @@ struct Config {
     // Corrida
     double maxTime = 100.0;  // t_max [s]
     unsigned long seed = 42;
-    double stopFraction = 1.0;  // Corta apenas F_u alcanza este valor (1.0 = nunca corta antes)
+    // Control de la corrida (no es un observable): corta apenas esta fraccion de
+    // las particulas hizo su primer gol (1.0 = nunca corta antes).
+    double stopFraction = 1.0;
 
     // Muestreo: se guarda el estado cada eventsPerSample eventos, no en cada evento.
     long eventsPerSample = 100;
 
     // Entrada / salida
     std::string obstaclesPath;   // Archivo de obstaculos; vacio = mesa vacia
-    std::string outputPath = "salida.csv";     // Serie temporal compacta
+    std::string outputPath = "salida.csv";     // Registro de goles ("Time,ID")
     std::string trajectoryPath;  // Trayectoria completa; vacio = no se escribe
+    bool noOutput = false;  // Si esta activo, no se escribe ningun archivo a disco
 
     // Colocacion de particulas
     Placement placement = Placement::Random;

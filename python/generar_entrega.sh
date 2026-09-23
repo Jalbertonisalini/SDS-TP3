@@ -21,19 +21,8 @@ echo "== 1.1 =="
 
 echo "== 1.2 =="
 "$PY" plot/t90_vs_configuracion.py --salida "$ENTREGA/1.2/t90_vs_configuracion.png"
-"$PY" plot/fu_vs_tiempo.py \
-  --directorio "$RESULTADOS/configs/vacia" \
-  --directorio "$RESULTADOS/configs/central_grande" \
-  --directorio "$RESULTADOS/configs/embudo" \
-  --salida "$ENTREGA/1.2/fu_vs_tiempo.png"
 
 echo "== 1.3 =="
-"$PY" plot/dcm_vs_tiempo.py \
-  --serie "$RESULTADOS/configs/vacia/N100_s1000.csv" \
-  --tmax-ajuste 2.0 \
-  --salida "$ENTREGA/1.3/dcm_vacia.png" \
-  --salida-error "$ENTREGA/1.3/error_pendiente_vacia.png"
-"$PY" plot/dcm_vs_tiempo.py \
-  --serie "$RESULTADOS/configs/embudo/N100_s1000.csv" \
-  --tmax-ajuste 2.0 \
-  --salida "$ENTREGA/1.3/dcm_embudo.png"
+# DCM y D de cada configuracion, y <t90> vs D. La ventana de ajuste vive en
+# punto_1_3.py para que todas las figuras usen la misma.
+"$PY" punto_1_3.py --solo-graficos

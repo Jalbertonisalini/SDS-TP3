@@ -5,12 +5,14 @@
                                 --salida ../entrega/1.2/fu_vs_tiempo.png
 
 Una curva por --directorio; el nombre de la configuracion se deduce de la ruta.
-Como la simulacion es dirigida por eventos, las series vienen con muestreo
-irregular: antes de promediar entre realizaciones se interpolan todas a una
-grilla temporal uniforme comun.
+F_u(t) se calcula aca (observables.fraccion_usada) a partir del registro de
+goles de cada realizacion: el motor no calcula observables. Como los goles
+traen su instante exacto, F_u se evalua directo sobre una grilla temporal
+uniforme comun y despues se promedia entre realizaciones.
 """
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -18,19 +20,19 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
+import observables
 
 
 def serie_promedio(directorio, grilla):
     """Promedia F_u(t) sobre las realizaciones del directorio, en la grilla dada."""
     curvas = []
     for csv_path in sorted(directorio.glob("N*_s*.csv")):
-        datos = pd.read_csv(csv_path)
-        # F_u es monotona no decreciente: fuera del rango simulado se mantiene el ultimo valor.
-        curvas.append(np.interp(grilla, datos["Time"], datos["UsedFraction"]))
+        particulas = int(re.match(r"N(\d+)_s\d+", csv_path.stem).group(1))
+        goles = observables.leer_goles(csv_path)
+        curvas.append(observables.fraccion_usada(goles, particulas, grilla))
     if not curvas:
         return None, None
     apiladas = np.vstack(curvas)

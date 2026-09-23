@@ -8,7 +8,6 @@ enum class ParticleState { Fresh = 0, Used = 1 };
 struct Particle {
     Vec2 position;
     Vec2 velocity;
-    Vec2 initialPosition;  // Referencia para el desplazamiento cuadratico medio
     double radius = 0.0;
     double mass = 0.0;
     ParticleState state = ParticleState::Fresh;
