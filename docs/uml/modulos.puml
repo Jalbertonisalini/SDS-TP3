@@ -1,0 +1,37 @@
+@startuml modulos
+!pragma layout smetana
+skinparam dpi 220
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 15
+skinparam roundCorner 14
+skinparam nodesep 90
+skinparam ranksep 22
+skinparam ArrowColor #4A5568
+skinparam ArrowThickness 1.6
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #2D3748
+  BorderThickness 1.8
+  FontColor #1A202C
+}
+
+' Etiqueta del lenguaje, al lado del nombre de cada modulo.
+!function $modulo($nombre, $lenguaje, $detalle)
+!return "<b>" + $nombre + "</b>  <size:14>· " + $detalle + "</size>     <size:12><color:#718096>[" + $lenguaje + "]</color></size>"
+!endfunction
+
+rectangle "$modulo('Orquestación', 'Python', 'barridos y puntos del TP')" as orq
+rectangle "$modulo('Optimizador genético', 'C++', 'búsqueda de configuraciones')" as opt
+rectangle "$modulo('Motor de simulación', 'C++', 'dinámica dirigida por eventos')" as motor
+rectangle "$modulo('Archivos de salida', 'Datos', 'estado y eventos')" as salida
+rectangle "$modulo('Postproceso', 'Python', 'cálculo de observables')" as post
+rectangle "$modulo('Gráficos', 'Python', 'figuras de la entrega')" as plot
+
+orq -down-> opt
+opt -down-> motor
+orq -down-> motor
+motor -down-> salida
+salida -down-> post
+post -down-> plot
+@enduml
