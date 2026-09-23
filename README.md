@@ -66,31 +66,36 @@ Queda el ejecutable en `build/simulador`.
 | `--v0 VALOR` | `1.0` | Módulo de la velocidad inicial [m/s] |
 | `--tmax VALOR` | `100` | Tiempo máximo simulado [s] |
 | `--seed VALOR` | `42` | Semilla del generador |
-| `--stop-fraction VALOR` | `2.0` | Corta al alcanzar esa `F_u`; un valor mayor que 1 desactiva el corte |
-| `--cada-eventos N` | `100` | Guarda el estado cada `N` eventos |
-| `--output ARCHIVO` | `salida.csv` | Serie temporal compacta |
-| `--trajectory ARCHIVO` | — | Trayectoria completa, solo para animar |
+| `--stop-fraction VALOR` | `2.0` | Corta cuando esa fracción de partículas ya hizo gol; un valor mayor que 1 desactiva el corte |
+| `--cada-eventos N` | `100` | Escribe la trayectoria cada `N` eventos |
+| `--output ARCHIVO` | `salida.csv` | Registro de goles |
+| `--trajectory ARCHIVO` | — | Estado de todas las partículas (DCM, animaciones) |
 | `--placement VALOR` | `random` | Colocación de partículas: `random` o `hex` (hexagonal) |
 
 ### Salidas
 
-Dos formatos, con propósitos distintos:
+El motor **no calcula observables**: solo escribe estado y eventos. Goles,
+`F_u(t)`, `t90` y DCM se calculan en postproceso con `python/observables.py`.
 
-- **Serie temporal compacta** (`--output`): `Time,Goals,UsedFraction,MSD`. Es la
-  que se usa para todo el análisis. Los observables se calculan dentro del motor
-  durante la corrida.
-- **Trayectoria completa** (`--trajectory`): `Time,ID,X,Y,VX,VY,State`, con
-  `State` = 0 (fresca) o 1 (usada). Pesa mucho: solo para las animaciones. Los
-  obstáculos no van acá — la animación los lee del mismo archivo `--config`.
+- **Registro de goles** (`--output`): `Time,ID`, una fila por partícula en el
+  instante exacto de su primer gol (cuando pasa de fresca a usada).
+- **Trayectoria** (`--trajectory`): `Time,ID,X,Y,VX,VY,State`, con `State` = 0
+  (fresca) o 1 (usada), cada `--cada-eventos` eventos. De acá salen el DCM y las
+  animaciones. Pesa mucho. Los obstáculos no van acá — se leen del mismo archivo
+  `--config`.
 
 Como la simulación es dirigida por eventos, la columna `Time` trae los instantes
 reales de los eventos y el muestreo es **irregular**: los scripts de análisis no
 asumen un `dt` constante.
 
-Además, el motor imprime por stdout un resumen en formato `clave=valor` con
-`tiempo_ejecucion_s`, `eventos`, `goles`, `t90` y `tiempo_final`. El tiempo de
+Además, el motor imprime por stdout métricas de rendimiento en formato
+`clave=valor`: `tiempo_ejecucion_s`, `eventos` y `tiempo_final`. El tiempo de
 ejecución lo mide el propio motor (wall-clock del bucle de eventos), para que no
-incluya el arranque del proceso. `t90` es negativo si nunca se alcanzó `F_u = 0.9`.
+incluya el arranque del proceso.
+
+Los datos de `build/resultados/configs/` (figuras de 1.2) son del motor anterior,
+que todavía escribía `Time,Goals,UsedFraction,MSD` e imprimía `goles` y `t90`.
+`run.py` no los reprocesa: conserva sus filas en `resumen.csv` tal como estaban.
 
 ## Configuraciones de obstáculos
 

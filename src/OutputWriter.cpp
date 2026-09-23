@@ -3,7 +3,7 @@
 #include <ios>
 #include <stdexcept>
 
-OutputWriter::OutputWriter(const std::string &seriesPath, const std::string &trajectoryPath,
+OutputWriter::OutputWriter(const std::string &goalsPath, const std::string &trajectoryPath,
                            bool noOutput)
 {
     if (noOutput)
@@ -11,14 +11,14 @@ OutputWriter::OutputWriter(const std::string &seriesPath, const std::string &tra
         return;
     }
 
-    series_.open(seriesPath);
-    if (!series_)
+    goals_.open(goalsPath);
+    if (!goals_)
     {
-        throw std::runtime_error("No se pudo abrir el archivo de salida: " + seriesPath);
+        throw std::runtime_error("No se pudo abrir el archivo de salida: " + goalsPath);
     }
-    series_ << "Time,Goals,UsedFraction,MSD\n";
-    series_.setf(std::ios::fixed);
-    series_.precision(6);
+    goals_ << "Time,ID\n";
+    goals_.setf(std::ios::fixed);
+    goals_.precision(6);
 
     if (!trajectoryPath.empty())
     {
@@ -33,14 +33,16 @@ OutputWriter::OutputWriter(const std::string &seriesPath, const std::string &tra
     }
 }
 
-void OutputWriter::writeSeries(double time, int goals, double usedFraction,
-                               double meanSquaredDisplacement)
+void OutputWriter::writeGoals(const std::vector<GoalEvent> &goals)
 {
-    if (!series_.is_open())
+    if (!goals_.is_open())
     {
         return;
     }
-    series_ << time << ',' << goals << ',' << usedFraction << ',' << meanSquaredDisplacement << '\n';
+    for (const GoalEvent &goal : goals)
+    {
+        goals_ << goal.time << ',' << goal.particle << '\n';
+    }
 }
 
 void OutputWriter::writeTrajectory(double time, const std::vector<Particle> &particles)

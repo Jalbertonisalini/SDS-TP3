@@ -7,7 +7,7 @@ Lee el mismo resumen agregado que arma run.barrido_configs (build/resultados/
 configs/resumen.csv), filtra las configuraciones "circulo_rX.XX" mas "vacia"
 (que se toma como el punto en radio=0) y usa el radio como eje x numerico en
 vez de un eje categorico. Las configuraciones que no llegan a F_u=0.9 dentro
-de t_max se marcan aparte: el motor devuelve t90 negativo en ese caso.
+de t_max se marcan aparte: resumen.csv trae t90 = -1 en ese caso.
 """
 
 import argparse

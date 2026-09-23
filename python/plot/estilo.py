@@ -27,6 +27,7 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
@@ -58,15 +59,52 @@ def notacion_cientifica(ax, eje="y"):
     formateador.get_offset_text().set_fontsize(config.FUENTE)
 
 
+def exponente_de_eje(ax, eje):
+    """Potencia de 10 que corresponde al eje con el mismo criterio que
+    notacion_cientifica (0 si los valores no son ni muy chicos ni muy grandes).
+    Se calcula con los limites ya fijados: llamar despues de graficar."""
+    limites = ax.get_xlim() if eje == "x" else ax.get_ylim()
+    maximo = max(abs(valor) for valor in limites)
+    if maximo == 0:
+        return 0
+    exponente = math.floor(math.log10(maximo))
+    return exponente if exponente <= -2 or exponente >= 3 else 0
+
+
+def etiquetar_eje_con_potencia(ax, eje, nombre, unidad, exponente=None):
+    """Como notacion_cientifica, pero el factor 10^n va dentro de la etiqueta
+    junto a la unidad ("D (10^-2 m^2/s)") en vez de quedar suelto en la esquina
+    del eje, donde es facil no verlo. Los ticks quedan como numeros simples.
+
+    `exponente` fuerza la potencia (ej. la misma en todos los paneles de una
+    grilla); si no se pasa, se elige segun los valores del eje."""
+    if exponente is None:
+        exponente = exponente_de_eje(ax, eje)
+    eje_mpl = ax.xaxis if eje == "x" else ax.yaxis
+    if exponente:
+        formateador = ScalarFormatter(useMathText=True)
+        formateador.set_powerlimits((exponente, exponente))  # fuerza esa potencia
+        eje_mpl.set_major_formatter(formateador)
+        eje_mpl.get_offset_text().set_visible(False)
+        unidad = f"$10^{{{exponente}}}$ {unidad}"
+    eje_mpl.set_label_text(f"{nombre} ({unidad})", fontsize=config.FUENTE)
+
+
 def columnas_grilla(n):
     """Columnas para una grilla de n paneles lo mas cuadrada posible (4 ->
     2x2, 6 -> 3x2, 9 -> 3x3), en vez de amontonar todo en una sola fila."""
     return math.ceil(math.sqrt(n))
 
 
-def guardar(fig, ruta):
+def guardar(fig, ruta, separacion=None):
+    """`separacion`: espacio extra entre paneles de una grilla, en unidades de
+    tamano de fuente (w_pad/h_pad de tight_layout). Hace falta cuando los ejes
+    llevan el "x10^n" de notacion_cientifica, que tight_layout no reserva bien."""
     ruta = Path(ruta)
-    fig.tight_layout()
+    if separacion is None:
+        fig.tight_layout()
+    else:
+        fig.tight_layout(w_pad=separacion, h_pad=separacion)
     ruta.parent.mkdir(parents=True, exist_ok=True)
     # bbox_inches="tight": sin esto, un ylabel largo (ej. "Mejor fitness del
     # GA (t90 en s, o penalizacion)") puede quedar recortado en el borde

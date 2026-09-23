@@ -7,6 +7,10 @@ Dos barridos, uno por subcomando:
 
 Por defecto no se re-corre un caso cuyo CSV ya existe: los barridos son largos
 y se reanudan a mano muchas veces. Con --forzar se recorre igual.
+
+El motor solo devuelve el registro de goles (--output) y metricas de
+rendimiento por stdout; goles y t90 de cada fila se calculan aca, en
+postproceso, con observables.py.
 """
 
 import argparse
@@ -16,6 +20,7 @@ import subprocess
 import sys
 
 import config
+import observables
 
 
 def parsear_resumen(salida):
@@ -32,9 +37,10 @@ def parsear_resumen(salida):
 def correr(destino, argumentos, forzar):
     """Corre una simulacion si hace falta y devuelve su resumen.
 
-    Cada corrida exitosa deja un sidecar ``<csv>.resumen`` con las metricas que
-    imprime el motor por stdout. Asi, un barrido cortado a la mitad no pierde los
-    tiempos: el resumen_agregado se puede reconstruir desde los sidecars.
+    Cada corrida exitosa deja un sidecar ``<csv>.resumen`` con las metricas de
+    rendimiento que imprime el motor por stdout. Asi, un barrido cortado a la
+    mitad no pierde los tiempos: el resumen agregado se puede reconstruir desde
+    los sidecars (y los observables, desde los registros de goles).
     Solo se saltea un caso si ya existe tanto el CSV como su sidecar; si falta el
     sidecar se re-corre para volver a capturar las metricas.
     """
@@ -55,36 +61,48 @@ def correr(destino, argumentos, forzar):
     return parsear_resumen(proceso.stdout)
 
 
-def fila_desde_sidecar_partículas(sidecar):
-    """Reconstruye una fila del resumen de particulas desde un sidecar."""
-    m = re.fullmatch(r"N(\d+)_s(\d+)", sidecar.stem)
-    if not m:
-        return None
-    resumen = parsear_resumen(sidecar.read_text())
+def metricas_de_corrida(destino, resumen, particulas):
+    """Rendimiento (del stdout del motor) + observables calculados desde el registro de goles."""
+    goles = observables.leer_goles(destino)
     return {
-        "N": int(m.group(1)),
-        "semilla": int(m.group(2)),
         "tiempo_ejecucion_s": resumen["tiempo_ejecucion_s"],
         "eventos": int(resumen["eventos"]),
-        "goles": int(resumen["goles"]),
-        "t90": resumen["t90"],
+        "goles": len(goles),
+        "t90": observables.t90(goles, particulas),
     }
+
+
+def metricas_desde_sidecar(sidecar):
+    """(N, semilla, metricas) de una corrida ya hecha, o None si no se puede postprocesar.
+
+    Las corridas del motor anterior (serie con los observables ya calculados por
+    el motor) se saltean: su fila, si existe, se conserva tal cual estaba en
+    resumen.csv."""
+    m = re.fullmatch(r"N(\d+)_s(\d+)", sidecar.stem)
+    destino = sidecar.with_suffix(".csv")
+    if not m or not destino.exists() or not observables.es_registro_de_goles(destino):
+        return None
+    particulas = int(m.group(1))
+    resumen = parsear_resumen(sidecar.read_text())
+    return particulas, int(m.group(2)), metricas_de_corrida(destino, resumen, particulas)
+
+
+def fila_desde_sidecar_partículas(sidecar):
+    """Reconstruye una fila del resumen de particulas desde un sidecar."""
+    corrida = metricas_desde_sidecar(sidecar)
+    if corrida is None:
+        return None
+    particulas, semilla, metricas = corrida
+    return {"N": particulas, "semilla": semilla, **metricas}
 
 
 def fila_desde_sidecar_config(sidecar):
     """Reconstruye una fila del resumen de configuraciones desde un sidecar."""
-    m = re.fullmatch(r"N(\d+)_s(\d+)", sidecar.stem)
-    if not m:
+    corrida = metricas_desde_sidecar(sidecar)
+    if corrida is None:
         return None
-    resumen = parsear_resumen(sidecar.read_text())
-    return {
-        "configuracion": sidecar.parent.name,
-        "semilla": int(m.group(2)),
-        "tiempo_ejecucion_s": resumen["tiempo_ejecucion_s"],
-        "eventos": int(resumen["eventos"]),
-        "goles": int(resumen["goles"]),
-        "t90": resumen["t90"],
-    }
+    _, semilla, metricas = corrida
+    return {"configuracion": sidecar.parent.name, "semilla": semilla, **metricas}
 
 
 def escribir_resumen(directorio, columnas, claves, filas, extraer_sidecar=None):
@@ -144,14 +162,8 @@ def barrido_particulas(args):
             resumen = correr(destino, argumentos, args.forzar)
             if resumen is None:
                 continue
-            filas.append({
-                "N": n,
-                "semilla": semilla,
-                "tiempo_ejecucion_s": resumen["tiempo_ejecucion_s"],
-                "eventos": int(resumen["eventos"]),
-                "goles": int(resumen["goles"]),
-                "t90": resumen["t90"],
-            })
+            filas.append({"N": n, "semilla": semilla,
+                          **metricas_de_corrida(destino, resumen, n)})
 
     escribir_resumen(
         directorio,
@@ -189,14 +201,8 @@ def barrido_configs(args):
             resumen = correr(destino, argumentos, args.forzar)
             if resumen is None:
                 continue
-            filas.append({
-                "configuracion": nombre,
-                "semilla": semilla,
-                "tiempo_ejecucion_s": resumen["tiempo_ejecucion_s"],
-                "eventos": int(resumen["eventos"]),
-                "goles": int(resumen["goles"]),
-                "t90": resumen["t90"],
-            })
+            filas.append({"configuracion": nombre, "semilla": semilla,
+                          **metricas_de_corrida(destino, resumen, args.particulas)})
 
     escribir_resumen(
         directorio,
@@ -219,7 +225,7 @@ def construir_parser():
     comun.add_argument("--forzar", action="store_true",
                        help="Re-corre aunque el CSV ya exista")
     comun.add_argument("--cada-eventos", type=int, default=200,
-                       help="Guarda el estado cada N eventos (default 200)")
+                       help="Frecuencia de la trayectoria, si se escribe (default 200)")
 
     particulas = subparsers.add_parser("particulas", parents=[comun],
                                        help="Punto 1.1: barrido en N sin obstaculos")

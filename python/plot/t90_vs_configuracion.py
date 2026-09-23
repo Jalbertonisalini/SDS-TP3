@@ -6,7 +6,7 @@ Ademas de la media +/- desvio, anota el valor numerico (con las cifras
 significativas del desvio) arriba de cada punto.
 
 Las configuraciones que no llegan al 90% de particulas usadas dentro de t_max
-se marcan aparte: el motor devuelve t90 negativo en ese caso.
+se marcan aparte: resumen.csv trae t90 = -1 en ese caso.
 """
 
 import argparse

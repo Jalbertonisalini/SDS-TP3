@@ -31,13 +31,15 @@ namespace
             << "Corrida:\n"
             << "  --tmax VALOR           Tiempo maximo simulado en s (default 100)\n"
             << "  --seed VALOR           Semilla del generador (default 42)\n"
-            << "  --stop-fraction VALOR  Corta al alcanzar esta F_u; >1 desactiva el corte\n"
+            << "  --stop-fraction VALOR  Corta cuando esta fraccion de particulas ya hizo gol;\n"
+            << "                         >1 desactiva el corte\n"
             << "                         (default 2.0)\n"
             << "  --cada-eventos N       Guarda el estado cada N eventos (default 100)\n"
             << "  --placement VALOR      Colocacion: random (default) o hex\n\n"
             << "Salida:\n"
-            << "  --output ARCHIVO       Serie temporal compacta (default salida.csv)\n"
-            << "  --trajectory ARCHIVO   Trayectoria completa para animar (default: no se escribe)\n"
+            << "  --output ARCHIVO       Registro de goles \"Time,ID\" (default salida.csv)\n"
+            << "  --trajectory ARCHIVO   Estado de todas las particulas cada --cada-eventos\n"
+            << "                         eventos (default: no se escribe)\n"
             << "  --no-output            No escribe ningun archivo a disco (solo resumen por stdout);\n"
             << "                         util para corridas masivas, p.ej. algoritmos geneticos\n"
             << "  --help                 Muestra esta ayuda\n";
@@ -186,13 +188,12 @@ int main(int argc, char **argv)
         OutputWriter writer(config.outputPath, config.trajectoryPath, config.noOutput);
         engine.run(writer);
 
-        // Resumen en "clave=valor" para que la capa de orquestacion lo parsee sin
-        // tener que releer el CSV. El tiempo de ejecucion lo mide el motor.
+        // Metricas de rendimiento en "clave=valor" para la capa de orquestacion.
+        // Ningun observable fisico sale por aca: se calculan en postproceso a
+        // partir de --output y --trajectory.
         std::cout << std::fixed << std::setprecision(6)
                   << "tiempo_ejecucion_s=" << engine.wallClockSeconds() << '\n'
                   << "eventos=" << engine.processedEvents() << '\n'
-                  << "goles=" << engine.goals() << '\n'
-                  << "t90=" << engine.timeToNinetyPercent() << '\n'
                   << "tiempo_final=" << engine.finalTime() << '\n';
         return 0;
     }

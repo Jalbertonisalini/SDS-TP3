@@ -113,14 +113,14 @@ double Optimizer::evaluateIndividual(const std::vector<ObstacleGene>& genome,
         // Config invalida o no entran las N particulas: peor caso posible,
         // no se cae la corrida por una configuracion patologica que se
         // haya colado (isValidCandidate ya filtra la enorme mayoria).
-        SimulationEngine::RunResult result{-1.0, 0};
+        std::vector<GoalEvent> goals;
         try {
             SimulationEngine engine(simConfig);
-            result = engine.runSilent();
+            goals = engine.runSilent();
         } catch (const std::exception&) {
         }
 
-        total += fitness_->evaluate(result, config_.maxTime);
+        total += fitness_->evaluate(goals, config_.particleCount, config_.maxTime);
     }
     return total / static_cast<double>(seeds.size());
 }

@@ -69,7 +69,6 @@ void SimulationEngine::placeParticlesRandom() {
         const double angle = angleDist(generator);
         Particle particle;
         particle.position = candidate;
-        particle.initialPosition = candidate;
         particle.velocity = {config_.initialSpeed * std::cos(angle),
                              config_.initialSpeed * std::sin(angle)};
         particle.radius = r;
@@ -116,7 +115,6 @@ void SimulationEngine::placeParticlesHexagonal() {
         const double angle = angleDist(generator);
         Particle particle;
         particle.position = grid[static_cast<std::size_t>(i)];
-        particle.initialPosition = grid[static_cast<std::size_t>(i)];
         particle.velocity = {config_.initialSpeed * std::cos(angle),
                              config_.initialSpeed * std::sin(angle)};
         particle.radius = r;
@@ -303,11 +301,7 @@ void SimulationEngine::resolveVerticalWall(int i) {
     const bool insideGoal = std::abs(p.position.y - config_.width / 2.0) <= config_.goalSize / 2.0;
     if (insideGoal && p.state == ParticleState::Fresh) {
         p.state = ParticleState::Used;
-        ++goals_;
-        const double usedFraction = static_cast<double>(goals_) / config_.particleCount;
-        if (timeToNinety_ < 0.0 && usedFraction >= 0.9) {
-            timeToNinety_ = time_;
-        }
+        goalEvents_.push_back({time_, i});
     }
 
     // La pared es indeformable y esta tambien sobre el arco: la particula rebota siempre.
@@ -320,36 +314,24 @@ void SimulationEngine::resolveHorizontalWall(int i) {
 }
 
 // ---------------------------------------------------------------------------
-// Observables y bucle principal
+// Salida y bucle principal
 // ---------------------------------------------------------------------------
-
-double SimulationEngine::meanSquaredDisplacement() const {
-    if (particles_.empty()) {
-        return 0.0;
-    }
-    double total = 0.0;
-    for (const Particle& p : particles_) {
-        total += (p.position - p.initialPosition).norm2();
-    }
-    return total / static_cast<double>(particles_.size());
-}
 
 void SimulationEngine::sample(OutputWriter* writer) {
     if (writer == nullptr) {
         return;
     }
-    const double usedFraction = static_cast<double>(goals_) / config_.particleCount;
-    writer->writeSeries(time_, goals_, usedFraction, meanSquaredDisplacement());
     writer->writeTrajectory(time_, particles_);
 }
 
 void SimulationEngine::run(OutputWriter& writer) {
     runLoop(&writer);
+    writer.writeGoals(goalEvents_);
 }
 
-SimulationEngine::RunResult SimulationEngine::runSilent() {
+std::vector<GoalEvent> SimulationEngine::runSilent() {
     runLoop(nullptr);
-    return {timeToNinety_, goals_};
+    return goalEvents_;
 }
 
 void SimulationEngine::runLoop(OutputWriter* writer) {
@@ -409,15 +391,19 @@ void SimulationEngine::runLoop(OutputWriter* writer) {
             sample(writer);
         }
 
-        const double usedFraction = static_cast<double>(goals_) / config_.particleCount;
-        if (usedFraction >= config_.stopFraction) {
+        // Control de la corrida, no observable: se usa la misma cuenta que
+        // define stopFraction (particulas que ya hicieron su primer gol).
+        const double usedShare =
+            static_cast<double>(goalEvents_.size()) / config_.particleCount;
+        if (usedShare >= config_.stopFraction) {
             break;
         }
     }
 
     // La corrida siempre llega hasta t_max (salvo corte por stopFraction), asi que
     // el ultimo tramo sin eventos tambien cuenta.
-    if (goals_ < static_cast<int>(config_.stopFraction * config_.particleCount)) {
+    if (static_cast<int>(goalEvents_.size()) <
+        static_cast<int>(config_.stopFraction * config_.particleCount)) {
         advanceTo(config_.maxTime);
     }
     sample(writer);

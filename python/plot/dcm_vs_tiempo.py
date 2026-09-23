@@ -1,8 +1,12 @@
 """Punto 1.3: DCM de una realizacion y coeficiente de difusion por ajuste lineal.
 
-    python plot/dcm_vs_tiempo.py --serie ../build/resultados/configs/vacia/N100_s1000.csv \
-                                 --tmax-ajuste 5 \
-                                 --salida ../entrega/1.3/dcm_vacia.png
+    python plot/dcm_vs_tiempo.py \
+        --trayectoria ../build/resultados/punto_1_3/dcm/vacia/trayectoria_N100_s1000.csv \
+        --tmax-ajuste 1.5 \
+        --salida ../entrega/1.3/dcm_vacia.png
+
+El DCM se calcula aca (observables.dcm) a partir de la trayectoria que escribe
+el motor con --trajectory; el motor no calcula observables.
 
 El ajuste sigue el metodo de la Teorica 0: se barre la pendiente candidata c,
 se calcula el error cuadratico E(c) = sum (DCM_i - c * t_i)^2 y se elige la c
@@ -16,14 +20,13 @@ import argparse
 import sys
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
+import estilo
+import observables
 
 DIMENSION = 2
 
@@ -40,59 +43,75 @@ def barrer_pendiente(tiempos, dcm, cantidad=2000):
     return pendientes, errores, pendientes[int(np.argmin(errores))]
 
 
+def dibujar_dcm(ax, datos, tiempos_ajuste, pendiente, etiqueta="DCM simulado"):
+    """DCM simulado y la recta DCM = c t sobre la ventana ajustada, en un eje dado
+    (lo reusa punto_1_3.py para armar la grilla de configuraciones)."""
+    difusion = pendiente / (2.0 * DIMENSION)
+    ax.plot(datos["Time"], datos["DCM"], label=etiqueta)
+    ax.plot(tiempos_ajuste, pendiente * tiempos_ajuste, linestyle="--", linewidth=2.5,
+            label=f"Ajuste: D = {difusion:#.2g} m$^2$/s")
+    estilo.etiquetar_ejes(ax, "Tiempo (s)", "DCM (m$^2$)")
+
+
+def dibujar_error(ax, pendientes, errores, pendiente):
+    """E(c) con su minimo c*, como en la Teorica 0, en un eje dado."""
+    ax.plot(pendientes, errores)
+    ax.plot([pendiente], [errores.min()], marker="o", markersize=10, linestyle="none",
+            color="black", label=f"c* = {pendiente:#.2g} m$^2$/s")
+    estilo.etiquetar_ejes(ax)
+    estilo.etiquetar_eje_con_potencia(ax, "x", "Pendiente c", "m$^2$/s")
+    estilo.etiquetar_eje_con_potencia(ax, "y", "E(c)", "m$^4$")
+
+
+def graficar_dcm(datos, tiempos_ajuste, pendiente, tmax_grafico, salida):
+    # Recortar el eje temporal deja ver el tramo ajustado: con la serie completa
+    # la meseta de saturacion ocupa casi todo el grafico.
+    if tmax_grafico is not None:
+        datos = datos[datos["Time"] <= tmax_grafico]
+    fig, ax = estilo.nueva_figura()
+    dibujar_dcm(ax, datos, tiempos_ajuste, pendiente)
+    ax.legend(loc="best", fontsize=config.FUENTE)
+    estilo.guardar(fig, salida)
+
+
+def graficar_error(pendientes, errores, pendiente, salida):
+    fig, ax = estilo.nueva_figura()
+    dibujar_error(ax, pendientes, errores, pendiente)
+    ax.legend(loc="upper center", fontsize=config.FUENTE)
+    estilo.guardar(fig, salida)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--serie", type=Path, required=True,
-                        help="CSV de serie compacta de una unica realizacion")
+    parser.add_argument("--trayectoria", type=Path, required=True,
+                        help="Trayectoria (--trajectory del motor) de una unica realizacion")
     parser.add_argument("--tmax-ajuste", type=float, required=True,
                         help="Ultimo instante incluido en el ajuste lineal, en s")
+    parser.add_argument("--tmax-grafico", type=float, default=None,
+                        help="Ultimo instante graficado, en s (default: toda la serie)")
     parser.add_argument("--salida", type=Path, required=True, help="Archivo PNG del DCM")
     parser.add_argument("--salida-error", type=Path, default=None,
                         help="Archivo PNG opcional con la curva de error E(c)")
     args = parser.parse_args()
 
-    if not args.serie.exists():
-        print(f"Falta la serie: {args.serie}", file=sys.stderr)
+    if not args.trayectoria.exists():
+        print(f"Falta la trayectoria: {args.trayectoria}", file=sys.stderr)
         return 1
 
-    datos = pd.read_csv(args.serie)
+    datos = observables.dcm(observables.leer_trayectoria(args.trayectoria))
     ventana = datos[datos["Time"] <= args.tmax_ajuste]
     tiempos = ventana["Time"].to_numpy()
-    dcm = ventana["MSD"].to_numpy()
+    dcm = ventana["DCM"].to_numpy()
 
     pendientes, errores, pendiente = barrer_pendiente(tiempos, dcm)
     difusion = pendiente / (2.0 * DIMENSION)
     print(f"Pendiente ajustada: {pendiente:.6f} m^2/s")
     print(f"Coeficiente de difusion D = {difusion:.6f} m^2/s")
 
-    fig, ax = plt.subplots(figsize=config.TAM_FIG)
-    ax.plot(datos["Time"], datos["MSD"], marker="o", markersize=3, linestyle="none",
-            label="DCM simulado")
-    ax.plot(tiempos, pendiente * tiempos, linestyle="--",
-            label=f"Ajuste: D = {difusion:.4f} m$^2$/s")
-    ax.set_xlabel("Tiempo (s)", fontsize=config.FUENTE)
-    ax.set_ylabel("Desplazamiento cuadratico medio (m$^2$)", fontsize=config.FUENTE)
-    ax.tick_params(labelsize=config.FUENTE)
-    ax.legend(loc="best", fontsize=config.FUENTE)
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    args.salida.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(args.salida, dpi=config.DPI)
-    print(f"Figura guardada en {args.salida}")
-
+    graficar_dcm(datos, tiempos, pendiente, args.tmax_grafico, args.salida)
     if args.salida_error:
-        fig_error, ax_error = plt.subplots(figsize=config.TAM_FIG)
-        ax_error.plot(pendientes, errores)
-        ax_error.axvline(pendiente, linestyle="--", color="black", alpha=0.6)
-        ax_error.set_xlabel("Pendiente candidata (m$^2$/s)", fontsize=config.FUENTE)
-        ax_error.set_ylabel("Error cuadratico", fontsize=config.FUENTE)
-        ax_error.tick_params(labelsize=config.FUENTE)
-        ax_error.grid(alpha=0.3)
-        fig_error.tight_layout()
-        args.salida_error.parent.mkdir(parents=True, exist_ok=True)
-        fig_error.savefig(args.salida_error, dpi=config.DPI)
-        print(f"Figura guardada en {args.salida_error}")
+        graficar_error(pendientes, errores, pendiente, args.salida_error)
 
     return 0
 
