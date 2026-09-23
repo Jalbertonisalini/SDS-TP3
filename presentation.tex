@@ -68,9 +68,9 @@
       % diapositivas hay que actualizarlos.
       \dgrp{2}{5}{Intro.}
       \dgrp{6}{7}{Impl.}
-      \dgrp{8}{14}{Sim.}
-      \dgrp{15}{22}{Resultados}
-      \dgrp{23}{24}{Conc.}
+      \dgrp{8}{12}{Sim.}
+      \dgrp{13}{32}{Resultados}
+      \dgrp{33}{34}{Conc.}
     \end{tikzpicture}
   \end{beamercolorbox}
 }
@@ -162,6 +162,16 @@
       \par\vspace{0.5em}
       {\scriptsize Video: \href{#4}{#4}}
   \end{columns}
+}
+
+% Una animacion por diapositiva: fotograma representativo y el enlace al
+% video debajo (guia 2.4.8).
+\newcommand{\animuno}[2]{% #1 = fotograma, #2 = link
+  \vspace{-0.6em}
+  \begin{center}
+    \includegraphics[width=\textwidth,height=0.74\textheight,keepaspectratio]{#1}
+    \par\vspace{0.3em}{\scriptsize Video: \href{#2}{#2}}
+  \end{center}
 }
 
 % --- Metadatos ---
@@ -319,6 +329,7 @@
     \item $N_g(t)$: partículas que ya atravesaron un arco.
     \item $F_u(t) = N_g(t)/N$: fracción de partículas usadas.
     \item $t_{90}$: primer instante con $F_u(t) \ge 0.9$.
+    \item $\langle t_{90} \rangle_n$: promedio de $t_{90}$ sobre $n$ realizaciones.
     \item $\mathrm{DCM}(t)$: desplazamiento cuadrático medio
       \[
         \mathrm{DCM}(t) = \frac{1}{N}\sum_{i=1}^{N}
@@ -338,63 +349,31 @@
       Mesa vacía        & ninguno              & baseline          & --- \\
       Círculo           & 1, centrado          & barrido exhaustivo & radio $R$ \\
       Quad              & $K$ c. simetría quad & Algoritmo genético (GA) & $K \in \{5,9,13,17\}$ \\
-      Pared             & pared de círculos    & Algoritmo genético (GA) & grano, perfil \\
+      Pared             & pared de círculos    & Algoritmo genético (GA) & grano, puntos de perfil \\
       \bottomrule
     \end{tabular}
   \end{center}
 \end{frame}
 
-\begin{frame}{Configuraciones sin GA}
-  \begin{columns}[T,onlytextwidth]
-    \column{0.5\textwidth}
-      \hfill
-      \resizebox{\columnwidth}{!}{%
-        \begin{tikzpicture}[x=3.9cm,y=3.9cm]
-          \fill[black!6] (0,0) rectangle (1.2,0.68);
-          \draw[thick] (0,0) rectangle (1.2,0.68);
-          \draw[red!70!black,line width=2.2pt]
-            (0,0.24) -- (0,0.44)  (1.2,0.24) -- (1.2,0.44);
-          \foreach \x/\y/\ang in {0.10/0.08/60, 0.18/0.58/150, 0.32/0.42/210, 0.40/0.15/20, 0.26/0.26/300, 0.66/0.12/140, 0.76/0.50/200, 0.98/0.34/10, 0.05/0.34/80}
-            {%
-              \fill[blue!70!black] (\x,\y) circle(2.4pt);
-              \draw[->,blue!70!black] (\x,\y) -- ++(\ang:0.075);
-            }
-        \end{tikzpicture}}
-      \begin{center}{\small Mesa vacía}\end{center}
-
-    \column{0.5\textwidth}
-      \hfill
-      \includegraphics[width=\columnwidth]{entrega/1.2/circulo_mejor_caso_frame.png}
-      \begin{center}{\small Círculo gigante}\end{center}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Configuraciones con GA}
-  \begin{columns}[T,onlytextwidth]
-    \column{0.5\textwidth}
-      \begin{center}
-        {\small Quad}\\[0.2em]
-        \includegraphics[width=\columnwidth]{entrega/1.2/quad_geometrias.png}
-      \end{center}
-
-    \column{0.5\textwidth}
-      \begin{center}
-        {\small Pared de círculos}\\[0.2em]
-        \includegraphics[width=\columnwidth]{entrega/1.2/pared_geometrias.png}
-      \end{center}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{GA: genes e hiperparámetros}
-  \begin{itemize}\small
-    \setlength{\itemsep}{0.5em}
-    \item El GA modifica (genes): pos.~$(x,y)$ y radio de los obstáculos
-      (quad); profundidades del perfil del muro (pared).
-    \item Hiperparámetros fijos: $K$, pobl.~48, gen.~60 (quad); grano,
-      perfil, pobl.~64, gen.~150 (pared).
-    \item Fitness: minimizar $\tilde{t}_{90}$ (5 semillas/gen.); validación
-      final con 100 corridas.
-  \end{itemize}
+\begin{frame}{Algoritmo genético}
+  \renewcommand{\arraystretch}{1.7}
+  \begin{center}
+    \begin{tabular}{@{}l l@{}}
+      \textbf{Fitness} &
+        $f(s) = \begin{cases}
+          t_{90}(s) & F_u \ge 0.9 \\
+          t_{\max} + \alpha\,\bigl(90 - N_g(t_{\max})\bigr) & \text{si no}
+        \end{cases}$ \\
+      & $\langle t_{90} \rangle_5 = \frac{1}{5}\sum_{j=1}^{5} f(s_j)$, \ 5 semillas por generación \\
+      \textbf{Selección} & Torneo de 3 \\
+      \textbf{Cruza} & BLX-$\alpha$: \ $g_h \sim U\bigl[g_{\min} - 0.3\,\Delta,\ g_{\max} + 0.3\,\Delta\bigr]$,
+        \ $\Delta = g_{\max} - g_{\min}$ \\
+      \textbf{Mutación} & $g' = g + \mathcal{N}(0, \sigma^2)$ con prob.~0.3 por gen,
+        \ $\sigma$ decrece con las generaciones \\
+      \textbf{Elitismo} & 2 mejores \\
+      \textbf{Validación} & Ganadores: $\langle t_{90} \rangle_{100}$\\
+    \end{tabular}
+  \end{center}
 \end{frame}
 
 \seccion{Resultados}
@@ -409,19 +388,69 @@
   \figuno{entrega/1.1/tiempo_ejecucion_vs_n_hex.png}
 \end{frame}
 
-\begin{frame}{Fracción de usadas\libre{$N = 100$}}
+% --- 1.2: circulo -> quad -> pared -> comparacion ---
+
+\begin{frame}{Círculo: codificación\libre{$R \in \{0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.34\}$ m}}
+  \figuno{entrega/1.2/codificacion_circulo.png}
+\end{frame}
+
+\begin{frame}{$\langle t_{90} \rangle_{100}$ vs Radio del círculo}
+  \figuno{entrega/1.2/circulo_t90_vs_radio.png}
+\end{frame}
+
+\begin{frame}{Círculo: mejor resultado}
+  \animuno{entrega/1.2/circulo_mejor_caso_frame.png}{https://youtu.be/TODO}
+\end{frame}
+
+\begin{frame}{Quad: codificación\libre{$K \in \{5, 9, 13, 17\}$, pobl.~48, 60 gen.}}
+  \figuno{entrega/1.2/codificacion_quad.png}
+\end{frame}
+
+\begin{frame}{Quad: geometrías propuestas por el GA}
+  \figuno{entrega/1.2/quad_geometrias.png}
+\end{frame}
+
+\begin{frame}{Quad: evolución del ganador\libre{$K = 9$}}
+  \figuno{entrega/1.2/quad_snapshots_k9.png}
+\end{frame}
+
+\begin{frame}{Quad: mejor resultado}
+  \animuno{entrega/1.2/quad_k9_mejor_caso_frame.png}{https://youtu.be/TODO}
+\end{frame}
+
+\begin{frame}{Pared: codificación}
+  \figuno{entrega/1.2/codificacion_pared.png}
+\end{frame}
+
+\begin{frame}{Pared: hiperparámetros\libre{Pobl.~40, 80 gen.}}
+  \figuno{entrega/1.2/pared_hparams.png}
+\end{frame}
+
+\begin{frame}{Pared: geometrías por puntos de perfil\libre{Grano 0.018 m, pobl.~40, 80 gen.}}
+  \figuno{entrega/1.2/pared_geometrias.png}
+\end{frame}
+
+\begin{frame}{Pared: evolución del ganador\libre{6 puntos, pobl.~64, 150 gen.}}
+  \figuno{entrega/1.2/pared_snapshots.png}
+\end{frame}
+
+\begin{frame}{Pared: mejor resultado}
+  \animuno{entrega/1.2/pared_mejor_caso_frame.png}{https://youtu.be/TODO}
+\end{frame}
+
+\begin{frame}{Comparación final}
+  \figuno{entrega/1.2/comparacion_final.png}
+\end{frame}
+
+\begin{frame}{Fracción de usadas}
   \figplaceholder{0.6\textheight}{entrega/1.2/fu_vs_tiempo.png}
 \end{frame}
 
-\begin{frame}{Exploración de configuraciones\libre{$N = 100$, 5 realizaciones}}
-  \figuno{entrega/1.2/t90_vs_configuracion.png}
-\end{frame}
-
-\begin{frame}{DCM vs Tiempo\libre{Por configuración}}
+\begin{frame}{DCM vs Tiempo}
   \figuno{entrega/1.3/dcm_comparacion.png}
 \end{frame}
 
-\begin{frame}{$\langle D \rangle$ vs $\langle t_{90} \rangle$\libre{Por configuración}}
+\begin{frame}{$\langle D \rangle$ vs $\langle t_{90} \rangle$}
   \figuno{entrega/1.3/t90_vs_difusion.png}
 \end{frame}
 

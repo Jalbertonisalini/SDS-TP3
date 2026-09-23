@@ -2,8 +2,9 @@
 
     python plot/t90_vs_configuracion.py --salida ../entrega/1.2/t90_vs_config.png
 
-Ademas de la media +/- desvio, anota el valor numerico (con las cifras
-significativas del desvio) arriba de cada punto.
+Solo el punto (media) con su barra de error, en el mismo azul que el resto
+de las figuras del punto 1.2: los valores numericos van aparte, en la
+diapositiva (y se imprimen por consola al final).
 
 Las configuraciones que no llegan al 90% de particulas usadas dentro de t_max
 se marcan aparte: resumen.csv trae t90 = -1 en ese caso.
@@ -58,19 +59,15 @@ def main():
 
     fig, ax = estilo.nueva_figura()
     ax.errorbar(posiciones, agrupado["mean"], yerr=agrupado["std"].fillna(0.0),
-                marker="o", capsize=4, linestyle="none", color="tab:orange", markersize=8,
+                marker="o", capsize=4, linestyle="none", color="tab:blue", markersize=8,
                 linewidth=2)
-    for pos, fila in zip(posiciones, agrupado.itertuples()):
-        desvio = fila.std if fila.std == fila.std else 0.0  # NaN-safe (1 sola realizacion)
-        etiqueta = f"{fila.mean:.2f} ± {desvio:.2f}"
-        # Ancla arriba de la punta de la barra de error (mean + desvio), no
-        # del punto medio, para que el numero no quede pisando la barra.
-        ax.annotate(etiqueta, (pos, fila.mean + desvio), textcoords="offset points",
-                   xytext=(0, 14), ha="center", va="bottom", fontsize=config.FUENTE * 0.7)
-    ax.margins(y=0.18)  # aire arriba para las anotaciones, si no quedan pegadas al borde
     ax.set_xticks(posiciones)
     ax.set_xticklabels(agrupado["configuracion"])
-    estilo.etiquetar_ejes(ax, "Configuracion de obstaculos", "t90 (s)")
+    # Subindice = realizaciones solo si todas las configs tienen la misma cantidad.
+    conteos = agrupado["count"].unique()
+    realizaciones = int(conteos[0]) if len(conteos) == 1 else None
+    estilo.etiquetar_ejes(ax, "Configuracion de obstaculos",
+                          f"{estilo.t90_promedio(realizaciones)} (s)")
 
     estilo.guardar(fig, args.salida)
     print(agrupado.to_string(index=False))

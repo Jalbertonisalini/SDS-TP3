@@ -36,7 +36,8 @@ def graficar_variable(ax, datos, variable, xlabel):
                 transform=ax.transAxes)
         return
     ax.plot(subconjunto["valor"], subconjunto["mejor_fitness"], marker="o")
-    estilo.etiquetar_ejes(ax, xlabel, "Fitness")
+    estilo.etiquetar_ejes(ax, xlabel,
+                          f"Mejor fitness {estilo.t90_promedio(estilo.SEMILLAS_GA)} (s)")
 
 
 def main():

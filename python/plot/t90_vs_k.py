@@ -28,6 +28,8 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--punto", nargs=3, action="append", metavar=("K", "MEDIA", "DESVIO"),
                         required=True, help="K, t90 medio y desvio (repetible)")
+    parser.add_argument("--realizaciones", type=int, default=None,
+                        help="Corridas detras de cada media (va de subindice en el eje y)")
     parser.add_argument("--salida", type=Path, required=True, help="Archivo PNG de salida")
     args = parser.parse_args()
 
@@ -38,13 +40,9 @@ def main():
 
     fig, ax = estilo.nueva_figura()
     ax.errorbar(ks, medias, yerr=desvios, marker="o", capsize=4, linestyle="-")
-    for k, media, desvio in puntos:
-        ax.annotate(f"{media:.2f} ± {desvio:.2f}", (k, media + desvio),
-                   textcoords="offset points", xytext=(0, 14), ha="center", va="bottom",
-                   fontsize=config.FUENTE * 0.7)
-    ax.margins(y=0.18)
     ax.set_xticks(ks)
-    estilo.etiquetar_ejes(ax, "Cantidad de obstaculos (K)", "t90 (s)")
+    estilo.etiquetar_ejes(ax, "Cantidad de obstaculos (K)",
+                          f"{estilo.t90_promedio(args.realizaciones)} (s)")
 
     estilo.guardar(fig, args.salida)
     return 0

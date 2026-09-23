@@ -10,6 +10,7 @@ las figuras.
     python punto_1_2.py                    # corre las 3 fases (default), incremental
     python punto_1_2.py --phase pared
     python punto_1_2.py --phase circulo_naive quad_ga
+    python punto_1_2.py --solo-graficos --phase quad_ga pared   # sin re-correr el GA
 
 Cada fase escribe sus CSVs/logs en build/resultados/ ANTES de graficar nada
 (mismo patron que run.py/genetico.py), asi que un grafico nuevo que haga
@@ -47,6 +48,7 @@ PLOT_DIR = Path(__file__).resolve().parent / "plot"
 sys.path.insert(0, str(PLOT_DIR))
 import diagrama_configs  # noqa: E402
 import estilo  # noqa: E402
+import perfil_pared  # noqa: E402
 
 ENTREGA_12 = config.ENTREGA / "1.2"
 
@@ -337,6 +339,7 @@ def graficar_t90_vs_k(representantes):
     trata cada config como categoria suelta, sin relacion de orden entre K's."""
     resumen = pd.read_csv(config.RESULTADOS / "configs" / "resumen.csv")
     comando = [sys.executable, str(PLOT_DIR / "t90_vs_k.py"),
+               "--realizaciones", str(REALIZACIONES_STATS),
                "--salida", str(ENTREGA_12 / "quad_t90_vs_k.png")]
     for k in sorted(representantes):
         nombre = f"ga_k{k}_s{representantes[k]}"
@@ -363,7 +366,8 @@ def graficar_geometrias_quad(representantes):
         valores = resumen.loc[(resumen["configuracion"] == nombre) & (resumen["t90"] >= 0), "t90"]
         titulo = f"K={k}"
         if len(valores):
-            titulo += f"   t90 = {valores.mean():.2f} ± {valores.std():.2f} s"
+            titulo += (f"   {estilo.t90_promedio(REALIZACIONES_STATS)} = "
+                       f"{valores.mean():.2f} ± {valores.std():.2f} s")
             print(f"    K={k}: t90 = {estilo.formatear_valor(valores.mean(), valores.std(), 's')}")
         diagrama_configs.dibujar_mesa(ax, diagrama_configs.leer_obstaculos(
             config.CONFIGS / f"{nombre}.txt"), titulo=titulo)
@@ -383,8 +387,9 @@ def graficar_snapshots_quad(k, semilla):
     valores = resumen.loc[(resumen["configuracion"] == nombre) & (resumen["t90"] >= 0), "t90"]
     gen, fitness = generacion_del_mejor(pob_dir.parent / "log.csv")
     if len(valores):
-        etiqueta += f"\nt90 = {valores.mean():.2f} ± {valores.std():.2f} s"
-    etiqueta += f"   fitness = {fitness:.2f} (gen {gen})"
+        etiqueta += (f"\n{estilo.t90_promedio(REALIZACIONES_STATS)} = "
+                     f"{valores.mean():.2f} ± {valores.std():.2f} s")
+    etiqueta += f"   {estilo.t90_promedio(estilo.SEMILLAS_GA)} = {fitness:.2f} s (gen {gen})"
     tercio = max(QUAD_GENERACIONES // 3, 1)
     comando = [sys.executable, str(PLOT_DIR / "snapshots_poblacion.py"),
                "--population-log", str(pob_dir),
@@ -394,6 +399,19 @@ def graficar_snapshots_quad(k, semilla):
                "--config-final-etiqueta", etiqueta,
                "--salida", str(ENTREGA_12 / f"quad_snapshots_k{k}.png")]
     subprocess.run(comando, check=True)
+
+
+def animar_quad(k, semilla_ga):
+    """Animacion + fotograma del ganador de un K, con la semilla base
+    (misma eleccion que la pared: una corrida tipica, no la mas rapida).
+    El barrido de 100 corridas no guarda trayectoria para quad, asi que se
+    re-corre esa semilla puntual con --trajectory."""
+    nombre = f"ga_k{k}_s{semilla_ga}"
+    ruta_trayectoria = (config.RESULTADOS / "configs" / nombre /
+                        f"trayectoria_quad_s{config.SEMILLA_BASE}.csv")
+    if not ruta_trayectoria.exists():
+        guardar_trayectoria_puntual(nombre, config.SEMILLA_BASE, "quad")
+    animar_caso(nombre, ruta_trayectoria, f"quad_k{k}_mejor_caso")
 
 
 def fase_quad_ga():
@@ -479,6 +497,8 @@ def fase_quad_ga():
     for k in (9, 17):
         if k in representantes:
             graficar_snapshots_quad(k, representantes[k])
+    if 9 in representantes:
+        animar_quad(9, representantes[9])
 
     fin_banner("quad_ga", inicio)
 
@@ -572,11 +592,13 @@ def graficar_geometrias_pared(grano_ganador):
         valores = resumen.loc[(resumen["configuracion"] == nombre) & (resumen["t90"] >= 0), "t90"]
         titulo = f"perfil={perfil}"
         if len(valores):
-            titulo += f"   t90 = {valores.mean():.2f} ± {valores.std():.2f} s"
+            titulo += (f"   {estilo.t90_promedio(REALIZACIONES_STATS)} = "
+                       f"{valores.mean():.2f} ± {valores.std():.2f} s")
             print(f"    perfil={perfil}: t90 = "
                   f"{estilo.formatear_valor(valores.mean(), valores.std(), 's')}")
-        diagrama_configs.dibujar_mesa(ax, diagrama_configs.leer_obstaculos(
-            config.CONFIGS / f"{nombre}.txt"), titulo=titulo)
+        obstaculos = diagrama_configs.leer_obstaculos(config.CONFIGS / f"{nombre}.txt")
+        diagrama_configs.dibujar_mesa(ax, obstaculos, titulo=titulo)
+        perfil_pared.dibujar_perfil(ax, obstaculos, perfil)
     for ax in ejes[n:]:
         ax.axis("off")
     estilo.guardar(fig, ENTREGA_12 / "pared_geometrias.png")
@@ -592,15 +614,16 @@ def graficar_convergencia_pared(ruta_log):
                     "--salida", str(ENTREGA_12 / "pared_convergencia.png")], check=True)
 
 
-def graficar_snapshots_pared(ruta_poblacion):
+def graficar_snapshots_pared(ruta_poblacion, perfil):
     etiqueta = "Pared ganadora"
     resumen = pd.read_csv(config.RESULTADOS / "configs" / "resumen.csv")
     valores = resumen.loc[(resumen["configuracion"] == "pared_ganadora") & (resumen["t90"] >= 0),
                           "t90"]
     gen, fitness = generacion_del_mejor(ruta_poblacion.parent / "log.csv")
     if len(valores):
-        etiqueta += f"\nt90 = {valores.mean():.2f} ± {valores.std():.2f} s"
-    etiqueta += f"   fitness = {fitness:.2f} (gen {gen})"
+        etiqueta += (f"\n{estilo.t90_promedio(REALIZACIONES_STATS)} = "
+                     f"{valores.mean():.2f} ± {valores.std():.2f} s")
+    etiqueta += f"   {estilo.t90_promedio(estilo.SEMILLAS_GA)} = {fitness:.2f} s (gen {gen})"
     generaciones = [str(g) for g in range(0, PARED_GENERACIONES_FINAL, 30)]
     subprocess.run([sys.executable, str(PLOT_DIR / "snapshots_poblacion.py"),
                     "--population-log", str(ruta_poblacion),
@@ -608,6 +631,7 @@ def graficar_snapshots_pared(ruta_poblacion):
                     "--solo-mejor", "--titulo-panel", "completo",
                     "--config-final", str(config.CONFIGS / "pared_ganadora.txt"),
                     "--config-final-etiqueta", etiqueta,
+                    "--perfil-pared", str(perfil),
                     "--salida", str(ENTREGA_12 / "pared_snapshots.png")], check=True)
 
 
@@ -677,7 +701,7 @@ def fase_pared():
     run.barrido_configs(args_sim)
 
     graficar_convergencia_pared(caso_final / "log.csv")
-    graficar_snapshots_pared(caso_final / "poblacion")
+    graficar_snapshots_pared(caso_final / "poblacion", perfil_ganador)
 
     ruta_trayectoria = (config.RESULTADOS / "configs" / "pared_ganadora" /
                         f"trayectoria_s{PARED_SEMILLA}.csv")
@@ -743,6 +767,55 @@ def graficar_comparacion_final():
 
 # --------------------------------------------------------------------------
 
+def representantes_quad():
+    """{K: semilla del GA} de los ganadores ya elegidos: fase_quad_ga deja
+    en configs/ un unico ga_k{K}_s{semilla}.txt por K."""
+    representantes = {}
+    for ruta in config.CONFIGS.glob("ga_k*_s*.txt"):
+        m = re.fullmatch(r"ga_k(\d+)_s(\d+)", ruta.stem)
+        if m:
+            representantes[int(m.group(1))] = int(m.group(2))
+    return representantes
+
+
+def ganadores_pared():
+    """(grano, perfil) ganadores del barrido de hiperparametros ya corrido,
+    con el mismo criterio que fase_pared (menor fitness del GA)."""
+    datos = pd.read_csv(config.RESULTADOS / "genetico" / "pared_hparams" / "resumen.csv")
+    granos = datos[datos["variable"] == "grain"]
+    grano = float(granos.loc[granos["mejor_fitness"].idxmin(), "valor"])
+    perfiles = datos[datos["variable"] == "profile"]
+    perfil = int(perfiles.loc[perfiles["mejor_fitness"].idxmin(), "valor"])
+    return grano, perfil
+
+
+def solo_graficos(fases):
+    """Regenera las figuras de las fases pedidas a partir de lo que ya esta
+    en build/resultados/, sin correr ningun GA (las simulaciones que falten
+    para una figura, como la trayectoria de una animacion, si se corren)."""
+    if "circulo_naive" in fases:
+        subprocess.run([sys.executable, str(PLOT_DIR / "t90_vs_radio.py"),
+                        "--salida", str(ENTREGA_12 / "circulo_t90_vs_radio.png")], check=True)
+    if "quad_ga" in fases:
+        representantes = representantes_quad()
+        graficar_t90_quad(representantes)
+        graficar_t90_vs_k(representantes)
+        graficar_geometrias_quad(representantes)
+        graficar_convergencia_quad(representantes)
+        for k in (9, 17):
+            if k in representantes:
+                graficar_snapshots_quad(k, representantes[k])
+        if 9 in representantes:
+            animar_quad(9, representantes[9])
+    if "pared" in fases:
+        grano, perfil = ganadores_pared()
+        graficar_hparams_pared(config.RESULTADOS / "genetico" / "pared_hparams" / "resumen.csv")
+        graficar_convergencia_pared(config.RESULTADOS / "genetico" / "pared" / "log.csv")
+        graficar_geometrias_pared(grano)
+        graficar_snapshots_pared(config.RESULTADOS / "genetico" / "pared" / "poblacion", perfil)
+    graficar_comparacion_final()
+
+
 FASES_FUNCIONES = {
     "circulo_naive": fase_circulo_naive,
     "quad_ga": fase_quad_ga,
@@ -757,12 +830,19 @@ def main():
                         help="Que fases correr (default: las 3)")
     parser.add_argument("--wipe", action="store_true",
                         help="Borra resultados previos de estas 3 fases y termina, sin correr nada")
+    parser.add_argument("--solo-graficos", action="store_true",
+                        help="Regenera las figuras de las fases pedidas con los resultados ya "
+                             "corridos, sin correr el GA")
     parser.add_argument("--si", action="store_true",
                         help="Con --wipe, no pide confirmacion antes de borrar")
     args = parser.parse_args()
 
     if args.wipe:
         wipe(confirmar=not args.si)
+        return 0
+
+    if args.solo_graficos:
+        solo_graficos(args.phase)
         return 0
 
     if not config.EJECUTABLE.exists() or not config.EJECUTABLE_GA.exists():

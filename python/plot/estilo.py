@@ -125,6 +125,17 @@ def _decimales_por_desvio(desvio):
     return max(-exponente, 0)
 
 
+def t90_promedio(realizaciones=None):
+    """Simbolo de <t90> promediado sobre `realizaciones` corridas, en
+    mathtext: "<t90>_5" es el fitness del GA (5 semillas comunes por
+    generacion), "<t90>_100" el t90 real validado con 100 simulaciones."""
+    sub = f"_{{{realizaciones}}}" if realizaciones else ""
+    return rf"$\langle t_{{90}} \rangle{sub}$"
+
+
+SEMILLAS_GA = 5  # --seeds-per-gen con el que corrieron todos los GA del punto 1.2
+
+
 def formatear_valor(media, desvio=None, unidad=""):
     """"13.5 ± 0.8 s": media y desvio redondeados a las cifras
     significativas que marca el desvio, con la unidad al final si se pasa."""

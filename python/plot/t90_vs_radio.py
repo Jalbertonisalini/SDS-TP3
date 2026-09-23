@@ -65,7 +65,10 @@ def main():
     fig, ax = estilo.nueva_figura()
     ax.errorbar(agrupado["radio"], agrupado["mean"], yerr=agrupado["std"].fillna(0.0),
                 marker="o", capsize=4, linestyle="-")
-    estilo.etiquetar_ejes(ax, "Radio del obstaculo (m)", "t90 (s)")
+    conteos = agrupado["count"].unique()
+    realizaciones = int(conteos[0]) if len(conteos) == 1 else None
+    estilo.etiquetar_ejes(ax, "Radio del obstaculo (m)",
+                          f"{estilo.t90_promedio(realizaciones)} (s)")
     estilo.guardar(fig, args.salida)
 
     # Precision completa aca (es log de corrida, no la tabla/figura final):

@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
 import estilo
+import perfil_pared
 from convergencia_poblacion import leer_poblacion, dibujar_mesa
 
 
@@ -80,10 +81,14 @@ def main():
                              "(default: 'Ganador final')")
     parser.add_argument("--titulo-panel", choices=["completo", "minimo", "ninguno"],
                         default="completo",
-                        help="completo: 'Generacion N  fitness = X' (default). "
+                        help="completo: 'Generacion N  <t90>_5 = X s' (default). "
                              "minimo: solo 'Generacion N', sin el valor de fitness -- para "
                              "entregas donde ese numero va aparte, al costado de la figura. "
                              "ninguno: sin texto embebido en el panel")
+    parser.add_argument("--perfil-pared", type=int, default=None, metavar="N",
+                        help="Si la corrida es de pared (optimizador --wall-profile N), dibuja "
+                             "encima la linea punteada del perfil interpolado y sus N puntos "
+                             "de control (solo con --solo-mejor)")
     args = parser.parse_args()
 
     if not args.population_log.exists():
@@ -125,6 +130,8 @@ def main():
             _, obstaculos, etiqueta = panel
             for x, y, radio in obstaculos:
                 ax.add_patch(Circle((x, y), radio, color="0.4", linewidth=0))
+            if args.perfil_pared:
+                perfil_pared.dibujar_perfil(ax, obstaculos, args.perfil_pared)
             if args.titulo_panel != "ninguno":
                 ax.set_title(etiqueta, fontsize=config.FUENTE * 0.6)
             continue
@@ -138,6 +145,9 @@ def main():
             # para comparar por fitness.
             for _, fila in individuo.iterrows():
                 ax.add_patch(Circle((fila["x"], fila["y"]), fila["r"], color="0.4", linewidth=0))
+            if args.perfil_pared:
+                perfil_pared.dibujar_perfil(ax, individuo[["x", "y", "r"]].to_numpy(),
+                                            args.perfil_pared)
         else:
             for _, individuo in cuadro.groupby("individuo"):
                 color = cmap(norm(individuo["fitness"].iloc[0]))
@@ -146,7 +156,8 @@ def main():
                                         linewidth=0))
         mejor = cuadro["fitness"].min()
         if args.titulo_panel == "completo":
-            ax.set_title(f"Generacion {generacion}    fitness = {mejor:.2f}",
+            ax.set_title(f"Generacion {generacion}    "
+                         f"{estilo.t90_promedio(estilo.SEMILLAS_GA)} = {mejor:.2f} s",
                         fontsize=config.FUENTE * 0.6)
         elif args.titulo_panel == "minimo":
             ax.set_title(f"Generacion {generacion}", fontsize=config.FUENTE * 0.6)

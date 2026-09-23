@@ -48,7 +48,8 @@ def main():
         datos = pd.read_csv(ruta_log)
         ax.plot(datos["generacion"], datos["mejor_fitness"], linewidth=2, label=etiqueta)
 
-    estilo.etiquetar_ejes(ax, "Generacion", "Fitness")
+    estilo.etiquetar_ejes(ax, "Generacion",
+                          f"Mejor fitness {estilo.t90_promedio(estilo.SEMILLAS_GA)} (s)")
     if len(args.serie) > 1:
         ax.legend(loc="best", fontsize=config.FUENTE * 0.8)
     estilo.guardar(fig, args.salida)
