@@ -26,10 +26,16 @@ from matplotlib.patches import FancyBboxPatch, Polygon
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import estilo
 
-RELLENO = "#d9d4cc"
-BORDE = "#8a8378"
-TEXTO = "#7a1f3d"
-FLECHA = "#5c6b2e"
+# Mismo formato que el diagrama de modulos (docs/uml/modulos.puml): Helvetica,
+# nombres en negrita, cajas blancas con borde oscuro y flechas grises. Arial va
+# primero porque matplotlib solo lee la cara regular de Helvetica.ttc y la
+# negrita no se veria; es practicamente la misma letra.
+FUENTE_FAMILIA = ["Arial", "Helvetica", "DejaVu Sans"]
+RELLENO = "#FFFFFF"
+BORDE = "#2D3748"
+TEXTO = "#1A202C"
+FLECHA = "#4A5568"
+ETIQUETA = TEXTO
 
 ANCHO_CAJA = 3.2
 ALTO_CAJA = 0.8
@@ -75,28 +81,28 @@ def dibujar_nodo(ax, clave):
     x, y = centro(clave)
     if tipo == "caja":
         forma = FancyBboxPatch((x - ANCHO_CAJA / 2, y - ALTO_CAJA / 2), ANCHO_CAJA, ALTO_CAJA,
-                               boxstyle="round,pad=0.02,rounding_size=0.08")
+                               boxstyle="round,pad=0.02,rounding_size=0.14")
     else:
         dx, dy = MEDIO_DIAMANTE
         forma = Polygon([(x, y + dy), (x + dx, y), (x, y - dy), (x - dx, y)], closed=True)
-    forma.set(facecolor=RELLENO, edgecolor=BORDE, linewidth=1.5)
+    forma.set(facecolor=RELLENO, edgecolor=BORDE, linewidth=1.8)
     ax.add_patch(forma)
     ax.text(x, y, texto, ha="center", va="center", color=TEXTO, fontsize=FUENTE,
-            linespacing=1.1)
+            fontfamily=FUENTE_FAMILIA, fontweight="bold", linespacing=1.1)
 
 
 def flecha(ax, puntos):
     """Polilinea con punta de flecha en el ultimo tramo."""
     xs, ys = zip(*puntos)
-    ax.plot(xs[:-1], ys[:-1], color=FLECHA, linewidth=2, solid_capstyle="butt")
+    ax.plot(xs[:-1], ys[:-1], color=FLECHA, linewidth=1.6, solid_capstyle="butt")
     ax.annotate("", xy=puntos[-1], xytext=puntos[-2],
-                arrowprops=dict(arrowstyle="-|>", color=FLECHA, linewidth=2,
-                                mutation_scale=18, shrinkA=0, shrinkB=0))
+                arrowprops=dict(arrowstyle="-|>", color=FLECHA, linewidth=1.6,
+                                mutation_scale=16, shrinkA=0, shrinkB=0))
 
 
 def etiqueta(ax, x, y, texto, ha="center"):
-    ax.text(x, y, texto, ha=ha, va="center", color=FLECHA, fontsize=FUENTE,
-            fontweight="bold")
+    ax.text(x, y, texto, ha=ha, va="center", color=ETIQUETA, fontsize=FUENTE - 1,
+            fontfamily=FUENTE_FAMILIA, fontweight="bold")
 
 
 def horizontal(ax, desde, hasta):
