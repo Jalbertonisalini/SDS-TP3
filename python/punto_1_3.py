@@ -297,7 +297,7 @@ def graficar_t90_vs_difusion(tabla):
     # D >= 0; margen para la barra de error de la mesa vacia
     ax.set_xlim(0.0, (tabla["D_medio_m2_s"] + tabla["D_desvio_m2_s"]).max() * 1.1)
     ax.legend(loc="upper left", fontsize=config.FUENTE * 0.8)
-    estilo.etiquetar_ejes(ax, ylabel=r"$\langle t_{90} \rangle$ (s)")
+    estilo.etiquetar_ejes(ax, ylabel=f"{estilo.t90_promedio(REALIZACIONES)} (s)")
     estilo.etiquetar_eje_con_potencia(ax, "x", r"$\langle D \rangle$", "m$^2$/s")
     estilo.guardar(fig, DIRECTORIO_ENTREGA / "t90_vs_difusion.png")
 

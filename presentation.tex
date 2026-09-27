@@ -291,14 +291,15 @@
         \item $r = 0.0175$ m
         \item $m = 0.025$ kg
         \item $v_0 = 1$ m/s
-        \item $K \ge 1$ obstáculos
+        \item $K \ge 0$ obstáculos
+        \item $N = 100$ partículas
       \end{itemize}
 
     % --- Columna del Diagrama ampliado ---
     \column{0.68\textwidth}
       \centering
-      % Escala aumentada a 5.6cm para ocupar el ancho disponible
-      \begin{tikzpicture}[x=5.6cm, y=5.6cm, >=stealth]
+      % Escala aumentada a 6.2cm para ocupar el ancho disponible
+      \begin{tikzpicture}[x=6.4cm, y=6.4cm, >=stealth]
         % Mesa
         \fill[black!6] (0,0) rectangle (1.2,0.68);
         \draw[thick] (0,0) rectangle (1.2,0.68);
@@ -349,6 +350,7 @@
         \mathrm{DCM}(t) = \frac{1}{N}\sum_{i=1}^{N}
           \left|\mathbf{r}_i(t) - \mathbf{r}_i(0)\right|^2
           \;\approx\; 2\,d\,D\,t = 4\,D\,t
+          \quad \text{\footnotesize($\approx$: aproximación)}
       \]
     \item Coeficiente de difusión ($D$):
       \[
@@ -454,7 +456,7 @@
   \figuno{entrega/1.3/dcm_comparacion.png}
 \end{frame}
 
-\begin{frame}{$\langle D \rangle$ vs $\langle t_{90} \rangle$}
+\begin{frame}{$\langle D \rangle$ vs $\langle t_{90} \rangle_{100}$}
   \figuno{entrega/1.3/t90_vs_difusion.png}
 \end{frame}
 
@@ -469,9 +471,9 @@
 \begin{frame}{Conclusiones}
   \begin{itemize}
     \setlength{\itemsep}{1em}
+    \item El tiempo de ejecución crece exponencialmente con la cantidad de partículas. % TODO
     \item % TODO
-    \item % TODO
-    \item % TODO
+    \item A menor $\langle D \rangle$, menor $\langle t_{90} \rangle$.
   \end{itemize}
 \end{frame}
 
