@@ -71,10 +71,10 @@
       % OJO: estos rangos estan hardcodeados. Si se agregan o quitan
       % diapositivas hay que actualizarlos.
       \dgrp{2}{4}{Intro.}
-      \dgrp{5}{6}{Impl.}
-      \dgrp{7}{11}{Sim.}
-      \dgrp{12}{30}{Resultados}
-      \dgrp{31}{33}{Conc.}
+      \dgrp{5}{7}{Impl.}
+      \dgrp{8}{12}{Sim.}
+      \dgrp{13}{31}{Resultados}
+      \dgrp{32}{34}{Conc.}
     \end{tikzpicture}
   \end{beamercolorbox}
 }
@@ -271,8 +271,12 @@
 
 \section{Implementación}
 
-\begin{frame}{Arquitectura del código}
+\begin{frame}{Arquitectura del código: General}
   \figuno{entrega/uml/modulos.png}
+\end{frame}
+
+\begin{frame}{Arquitectura del código: Algoritmo Genético}
+  \figuno{entrega/1.2/diagrama_flujo_ga.png}
 \end{frame}
 
 \seccion{Simulaciones}
@@ -350,7 +354,6 @@
         \mathrm{DCM}(t) = \frac{1}{N}\sum_{i=1}^{N}
           \left|\mathbf{r}_i(t) - \mathbf{r}_i(0)\right|^2
           \;\approx\; 2\,d\,D\,t = 4\,D\,t
-          \quad \text{\footnotesize($\approx$: aproximación)}
       \]
     \item Coeficiente de difusión ($D$):
       \[
@@ -373,9 +376,9 @@
       \textbf{Fitness} &
         $f(s) = \begin{cases}
           t_{90}(s) & F_u \ge 0.9 \\
-          t_{\max} + \alpha\,\bigl(90 - N_g(t_{\max})\bigr) & \text{si no}
+          t_{\max} + \alpha\,\bigl(90 - N_g(t_{\max})\bigr) & F_u < 0.9 \\
         \end{cases}$ \\
-      & $\langle t_{90} \rangle_5 = \frac{1}{5}\sum_{j=1}^{5} f(s_j)$, \ \\
+      & $\langle t_{90} \rangle_5 = \frac{1}{5}\sum_{j=1}^{5} f(s_j)$ \ \\
       \textbf{Selección} & Torneo de 3 \\
       \textbf{Cruza} & BLX-$\alpha$: \ $g_h \sim U\bigl[g_{\min} - 0.3\,\Delta,\ g_{\max} + 0.3\,\Delta\bigr]$,
         \ $\Delta = g_{\max} - g_{\min}$ \\
@@ -394,8 +397,8 @@
   \animdos{Mesa vacía}{https://youtu.be/TODO}{Configuración óptima}{https://youtu.be/TODO}
 \end{frame}
 
-\begin{frame}{Tiempo de ejecución vs Cantidad de partículas\libre{Sin obstáculos, $t_f = 30$ s}}
-  \figuno{entrega/1.1/tiempo_ejecucion_vs_n_hex.png}
+\begin{frame}{Tiempo de ejecución vs Cantidad de partículas\libre{Mesa vacía, $t_f = 30$ s}}
+  \figuno{entrega/1.1/tiempo_ejecucion_vs_n_hex_logy.png}
 \end{frame}
 
 % --- 1.2: circulo -> quad -> pared -> comparacion ---
@@ -460,7 +463,7 @@
   \figuno{entrega/1.3/t90_vs_difusion.png}
 \end{frame}
 
-\begin{frame}{Configuración elegida\libre{Competencia}}
+\begin{frame}{Configuración elegida\libre{}}
   % TODO: esquema de la configuración final y su $\langle t_{90}\rangle$.
 \end{frame}
 
