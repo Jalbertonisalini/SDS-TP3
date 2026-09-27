@@ -69,8 +69,8 @@
       \dgrp{2}{5}{Intro.}
       \dgrp{6}{7}{Impl.}
       \dgrp{8}{12}{Sim.}
-      \dgrp{13}{32}{Resultados}
-      \dgrp{33}{34}{Conc.}
+      \dgrp{13}{31}{Resultados}
+      \dgrp{32}{34}{Conc.}
     \end{tikzpicture}
   \end{beamercolorbox}
 }
@@ -200,10 +200,10 @@
 \begin{frame}{El sistema}
   \begin{itemize}
     \setlength{\itemsep}{1.2em}
-    \item Mesa de metegol con un arco en cada pared corta
-    \item Obstáculos fijos que guían a las pelotas hacia los arcos
-    \item $N$ esferas rígidas idénticas (masa $m_i$, radio $R_i$)
-    \item Sin fuerzas de largo alcance ni rozamiento
+    \item Mesa rectangular con arco en cada pared lateral.
+    \item Obstáculos fijos.
+    \item $N$ esferas de radio $r$ y masa $m$.
+    \item Choques elásticos.
   \end{itemize}
 \end{frame}
 
@@ -215,7 +215,7 @@
   \setlength{\belowdisplayshortskip}{3pt}
   \begin{itemize}
     \setlength{\itemsep}{1em}
-    \item Vuelo libre de las partículas:
+    \item Vuelo libre:
       \[
         x_i(t) = x_i(0) + v_{x_i}\,t, \qquad
         y_i(t) = y_i(0) + v_{y_i}\,t
@@ -248,12 +248,7 @@
   \setlength{\belowdisplayshortskip}{3pt}
   \begin{itemize}
     \setlength{\itemsep}{1.2em}
-    \item Pared u obstáculo fijo ($m \to \infty$), colisión elástica:
-      \[
-        vx_i^{d} = -vx_i^{a} \quad \text{(pared vertical)}, \qquad
-        vy_i^{d} = -vy_i^{a} \quad \text{(pared horizontal)}.
-      \]
-    \item Obstáculo circular fijo ($m \to \infty$), colisión elástica
+    \item Obstáculo circular fijo ($m \to \infty$),
       ($c_n = c_t = 1$):
       \smallskip
       \[
@@ -295,12 +290,12 @@
     \column{0.55\textwidth}
       \begin{itemize}
         \setlength{\itemsep}{0.6em}
-        \item Mesa billar--metegol: $L \times W = 1.20 \times 0.68$ m.
-        \item Arco: largo $d = 0.20$ m en cada pared corta.
-        \item $N$ partículas idénticas: radio $r = 0.0175$ m, masa
-          $m = 0.025$ kg.
-        \item Rapidez inicial $v_0 = 1$ m/s.
-        \item Obstáculos circulares fijos: opcionales.
+        \item Mesa: $L \times W = 1.20 \times 0.68$ m$^2$
+        \item Arco: largo $d = 0.20$ m
+        \item $N$ partículas: $r = 0.0175$ m,
+          $m = 0.025$ kg
+        \item $v_0 = 1$ m/s
+        \item $K$ obstáculos circulares fijos con $K >= 1$
       \end{itemize}
 
     \column{0.45\textwidth}
@@ -326,17 +321,16 @@
 \begin{frame}{Observables}
   \begin{itemize}
     \setlength{\itemsep}{0.9em}
-    \item $N_g(t)$: partículas que ya atravesaron un arco.
-    \item $F_u(t) = N_g(t)/N$: fracción de partículas usadas.
+    \item $N_g(t)$: partículas que impactaron con un arco.
+    \item $F_u(t) = N_g(t)/N$
     \item $t_{90}$: primer instante con $F_u(t) \ge 0.9$.
     \item $\langle t_{90} \rangle_n$: promedio de $t_{90}$ sobre $n$ realizaciones.
-    \item $\mathrm{DCM}(t)$: desplazamiento cuadrático medio
       \[
         \mathrm{DCM}(t) = \frac{1}{N}\sum_{i=1}^{N}
           \left|\mathbf{r}_i(t) - \mathbf{r}_i(0)\right|^2
           \;\approx\; 4\,D\,t,
       \]
-      con $D$ el coeficiente de difusión, ajustado en el tramo lineal.
+      con $D$ el coeficiente de difusión.
   \end{itemize}
 \end{frame}
 
@@ -364,14 +358,13 @@
           t_{90}(s) & F_u \ge 0.9 \\
           t_{\max} + \alpha\,\bigl(90 - N_g(t_{\max})\bigr) & \text{si no}
         \end{cases}$ \\
-      & $\langle t_{90} \rangle_5 = \frac{1}{5}\sum_{j=1}^{5} f(s_j)$, \ 5 semillas por generación \\
+      & $\langle t_{90} \rangle_5 = \frac{1}{5}\sum_{j=1}^{5} f(s_j)$, \ \\
       \textbf{Selección} & Torneo de 3 \\
       \textbf{Cruza} & BLX-$\alpha$: \ $g_h \sim U\bigl[g_{\min} - 0.3\,\Delta,\ g_{\max} + 0.3\,\Delta\bigr]$,
         \ $\Delta = g_{\max} - g_{\min}$ \\
       \textbf{Mutación} & $g' = g + \mathcal{N}(0, \sigma^2)$ con prob.~0.3 por gen,
         \ $\sigma$ decrece con las generaciones \\
       \textbf{Elitismo} & 2 mejores \\
-      \textbf{Validación} & Ganadores: $\langle t_{90} \rangle_{100}$\\
     \end{tabular}
   \end{center}
 \end{frame}
@@ -442,10 +435,6 @@
   \figuno{entrega/1.2/comparacion_final.png}
 \end{frame}
 
-\begin{frame}{Fracción de usadas}
-  \figplaceholder{0.6\textheight}{entrega/1.2/fu_vs_tiempo.png}
-\end{frame}
-
 \begin{frame}{DCM vs Tiempo}
   \figuno{entrega/1.3/dcm_comparacion.png}
 \end{frame}
@@ -473,7 +462,7 @@
 
 \begin{frame}
   \vfill
-  \begin{center}{\Huge\bfseries ¡Gracias!}\end{center}
+  \begin{center}{\Huge\bfseries Gracias!}\end{center}
   \vfill
 \end{frame}
 
