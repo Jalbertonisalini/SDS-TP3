@@ -69,9 +69,10 @@ VENTANA_AJUSTE = {  # s
     "vacia": 1.5,
     "circulo_r0.34": 1.2,
     "ga_k9_s1003": 1.0,
-    "pared_ganadora": 1.4,
+    "pared_ganadora": 1.2,
 }
 TMAX_GRAFICO = 10.0  # s, muestra el tramo ajustado y el comienzo de la saturacion
+TMAX_DIFUSION = 5.0  # s, corte de la comparacion con la recta de difusion
 SEPARACION_GRILLA = 3.0  # espacio entre paneles de las figuras 2x2 (ver estilo.guardar)
 
 DIRECTORIO_RESULTADOS = config.RESULTADOS / "punto_1_3"
@@ -281,6 +282,30 @@ def graficar_dcm_comparacion(tabla):
     estilo.guardar(fig, DIRECTORIO_ENTREGA / "dcm_comparacion.png")
 
 
+def graficar_dcm_difusion(tabla):
+    """DCM de una realizacion (SEMILLA_DCM) de cada configuracion hasta
+    TMAX_DIFUSION, con la recta DCM = 4 D t de cada una sobre su ventana de
+    ajuste. La recta se dibuja solo dentro de la ventana, asi que su punta
+    marca donde termina el tramo lineal y hacen falta las lineas verticales de
+    dcm_comparacion.png. El D es el de esta misma realizacion (columna D_m2_s
+    de la tabla), no el promedio de las REALIZACIONES, que no corresponde a
+    la curva dibujada. Las dos lineas de cada configuracion comparten color."""
+    fig, ax = estilo.nueva_figura()
+    for indice, fila in enumerate(tabla.itertuples()):
+        completa = pd.read_csv(ruta_serie_dcm(fila.configuracion))
+        ventana = completa[completa["Time"] <= fila.ventana_ajuste_s]
+        serie = completa[completa["Time"] <= TMAX_DIFUSION]
+        color = f"C{indice}"
+        ax.plot(serie["Time"], serie["DCM"], color=color, label=fila.etiqueta)
+        pendiente = fila.D_m2_s * 2.0 * DIMENSION
+        ax.plot(ventana["Time"], pendiente * ventana["Time"], linestyle="--",
+                linewidth=2.5, color=color,
+                label=f"D = {fila.D_m2_s:#.2g} m$^2$/s")
+    ax.legend(loc="upper left", ncol=2, fontsize=config.FUENTE * 0.7)
+    estilo.etiquetar_ejes(ax, "Tiempo (s)", "DCM (m$^2$)")
+    estilo.guardar(fig, DIRECTORIO_ENTREGA / "dcm_difusion.png")
+
+
 def graficar_t90_vs_difusion(tabla):
     """<t90> vs <D>, ambos con su desvio sobre las realizaciones, un color y
     marcador por configuracion. Circulo y quad caen
@@ -320,6 +345,7 @@ def main():
     graficar_dcm_por_configuracion()
     graficar_error_por_configuracion()
     graficar_dcm_comparacion(tabla)
+    graficar_dcm_difusion(tabla)
     graficar_t90_vs_difusion(tabla)
     return 0
 
