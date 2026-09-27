@@ -22,6 +22,10 @@
 % --- Paquetes ---
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+% Computer Modern Sans no tiene negrita real: t1cmss.fd solo define la serie
+% "bx". Sin esto, \textbf pide la serie "b", NFSS no la encuentra y cae
+% silenciosamente al peso regular (ver el aviso en el .log).
+\DeclareFontShape{T1}{cmss}{b}{n}{<->ssub * cmss/bx/n}{}
 \usepackage[spanish,es-nodecimaldot]{babel}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
@@ -66,11 +70,11 @@
 
       % OJO: estos rangos estan hardcodeados. Si se agregan o quitan
       % diapositivas hay que actualizarlos.
-      \dgrp{2}{5}{Intro.}
-      \dgrp{6}{7}{Impl.}
-      \dgrp{8}{12}{Sim.}
-      \dgrp{13}{31}{Resultados}
-      \dgrp{32}{34}{Conc.}
+      \dgrp{2}{4}{Intro.}
+      \dgrp{5}{6}{Impl.}
+      \dgrp{7}{11}{Sim.}
+      \dgrp{12}{30}{Resultados}
+      \dgrp{31}{33}{Conc.}
     \end{tikzpicture}
   \end{beamercolorbox}
 }
@@ -197,16 +201,6 @@
 
 \section{Introducción}
 
-\begin{frame}{El sistema}
-  \begin{itemize}
-    \setlength{\itemsep}{1.2em}
-    \item Mesa rectangular con arco en cada pared lateral.
-    \item Obstáculos fijos.
-    \item $N$ esferas de radio $r$ y masa $m$.
-    \item Choques elásticos.
-  \end{itemize}
-\end{frame}
-
 \begin{frame}{Modelo matemático: partículas}
   \small
   \setlength{\abovedisplayskip}{3pt}
@@ -286,66 +280,87 @@
 \section{Simulaciones}
 
 \begin{frame}{Geometría del sistema}
-  \begin{columns}[T,onlytextwidth]
-    \column{0.55\textwidth}
-      \begin{itemize}
-        \setlength{\itemsep}{0.6em}
-        \item Mesa: $L \times W = 1.20 \times 0.68$ m$^2$
-        \item Arco: largo $d = 0.20$ m
-        \item $N$ partículas: $r = 0.0175$ m,
-          $m = 0.025$ kg
+  \begin{columns}[c,onlytextwidth]
+    % --- Columna de Parámetros compactos ---
+    \column{0.32\textwidth}
+      \small
+      \begin{itemize}\setlength{\itemsep}{0.35em}
+        \item $L = 1.20$ m
+        \item $W = 0.68$ m
+        \item $d = 0.20$ m
+        \item $r = 0.0175$ m
+        \item $m = 0.025$ kg
         \item $v_0 = 1$ m/s
-        \item $K$ obstáculos circulares fijos con $K >= 1$
+        \item $K \ge 1$ obstáculos
       \end{itemize}
 
-    \column{0.45\textwidth}
-      \hfill
-      \begin{tikzpicture}[x=4.3cm,y=4.3cm]
+    % --- Columna del Diagrama ampliado ---
+    \column{0.68\textwidth}
+      \centering
+      % Escala aumentada a 5.6cm para ocupar el ancho disponible
+      \begin{tikzpicture}[x=5.6cm, y=5.6cm, >=stealth]
+        % Mesa
         \fill[black!6] (0,0) rectangle (1.2,0.68);
         \draw[thick] (0,0) rectangle (1.2,0.68);
-        \draw[red!70!black,line width=2.2pt]
-          (0,0.24) -- (0,0.44)  (1.2,0.24) -- (1.2,0.44);
-        \fill[black!60]
+
+        % Arcos (apertura d de 0.20m centrada verticalmente: 0.24 a 0.44)
+        \draw[red!70!black, line width=2.4pt]
+          (0,0.24) -- (0,0.44)
+          (1.2,0.24) -- (1.2,0.44);
+
+        % Obstáculos fijos (K)
+        \fill[black!65]
           (0.55,0.15) circle(0.05)
           (0.55,0.53) circle(0.05)
           (0.80,0.34) circle(0.05);
-        \foreach \x/\y/\ang in {0.10/0.08/60, 0.18/0.58/150, 0.32/0.42/210, 0.40/0.15/20, 0.26/0.26/300, 0.66/0.12/140, 0.76/0.50/200, 0.98/0.34/10, 0.05/0.34/80}
-          {%
-            \fill[blue!70!black] (\x,\y) circle(2.4pt);
-            \draw[->,blue!70!black] (\x,\y) -- ++(\ang:0.075);
-          }
+
+        % Partículas activas con vector de velocidad
+        \foreach \x/\y/\ang in {
+          0.10/0.08/60, 0.18/0.58/150, 0.32/0.42/210, 
+          0.40/0.15/20, 0.26/0.26/300, 0.66/0.12/140, 
+          0.76/0.50/200, 0.98/0.34/10, 0.05/0.34/80
+        }{
+          \fill[blue!70!black] (\x,\y) circle(2.2pt);
+          \draw[->, blue!70!black, thick] (\x,\y) -- ++(\ang:0.065);
+        }
+
+        % --- Cotas y Referencias (L, W, d) ---
+        % Cota de longitud L (abajo)
+        \draw[|<->|, thin, black!80] (0,-0.06) -- node[below, font=\footnotesize] {$L$} (1.2,-0.06);
+
+        % Cota de ancho W (derecha)
+        \draw[|<->|, thin, black!80] (1.26,0) -- node[right, font=\footnotesize] {$W$} (1.26,0.68);
+
+        % Cota del arco d (izquierda, señalando la apertura)
+        \draw[|<->|, thin, red!70!black] (-0.05,0.24) -- node[left, font=\footnotesize] {$d$} (-0.05,0.44);
       \end{tikzpicture}
   \end{columns}
 \end{frame}
 
 \begin{frame}{Observables}
   \begin{itemize}
-    \setlength{\itemsep}{0.9em}
+    \setlength{\itemsep}{0.6em}
     \item $N_g(t)$: partículas que impactaron con un arco.
     \item $F_u(t) = N_g(t)/N$
     \item $t_{90}$: primer instante con $F_u(t) \ge 0.9$.
     \item $\langle t_{90} \rangle_n$: promedio de $t_{90}$ sobre $n$ realizaciones.
+    \item Desplazamiento cuadrático medio ($d = 2$):
       \[
         \mathrm{DCM}(t) = \frac{1}{N}\sum_{i=1}^{N}
           \left|\mathbf{r}_i(t) - \mathbf{r}_i(0)\right|^2
-          \;\approx\; 4\,D\,t,
+          \;\approx\; 2\,d\,D\,t = 4\,D\,t
       \]
-      con $D$ el coeficiente de difusión.
+    \item Coeficiente de difusión ($D$):
+      \[
+        D = \frac{c^{*}}{4}
+      \]
+      con $c^{*}$ la pendiente óptima.
   \end{itemize}
 \end{frame}
 
 \begin{frame}{Configuraciones estudiadas}
   \begin{center}
-    \begin{tabular}{@{}llll@{}}
-      \toprule
-      Configuración & Obstáculos & Método & Se barre \\
-      \midrule
-      Mesa vacía        & ninguno              & baseline          & --- \\
-      Círculo           & 1, centrado          & barrido exhaustivo & radio $R$ \\
-      Quad              & $K$ c. simetría quad & Algoritmo genético (GA) & $K \in \{5,9,13,17\}$ \\
-      Pared             & pared de círculos    & Algoritmo genético (GA) & grano, puntos de perfil \\
-      \bottomrule
-    \end{tabular}
+    Acá van imágenes.
   \end{center}
 \end{frame}
 
