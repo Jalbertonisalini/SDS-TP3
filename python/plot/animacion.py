@@ -63,7 +63,8 @@ def dibujar_mesa(ax, obstaculos):
         ax.plot([x, x], [inferior, superior], color="tab:green", linewidth=4)
 
     for x, y, radio in obstaculos:
-        ax.add_patch(Circle((x, y), radio, color="0.4"))
+        ax.add_patch(Circle((x, y), radio, color=config.COLOR_OBSTACULO,
+                            alpha=config.ALPHA_OBSTACULO))
 
 
 def estados_por_instante(datos):

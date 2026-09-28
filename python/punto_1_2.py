@@ -46,6 +46,7 @@ import run
 
 PLOT_DIR = Path(__file__).resolve().parent / "plot"
 sys.path.insert(0, str(PLOT_DIR))
+import barras_configs  # noqa: E402
 import diagrama_configs  # noqa: E402
 import estilo  # noqa: E402
 import perfil_pared  # noqa: E402
@@ -253,6 +254,15 @@ def animar_caso(nombre, ruta_trayectoria, prefijo_salida):
     ]
     subprocess.run(comando, check=True)
 
+    # F_u(t) de esta misma corrida, para la diapositiva que sigue a la
+    # animacion: mismo prefijo sin "_mejor_caso" (circulo, quad_k9, pared).
+    base = prefijo_salida.removesuffix("_mejor_caso")
+    subprocess.run([
+        sys.executable, str(PLOT_DIR / "fu_vs_tiempo_corrida.py"),
+        "--trayectoria", str(ruta_trayectoria),
+        "--salida", str(ENTREGA_12 / f"{base}_fu_vs_tiempo.png"),
+    ], check=True)
+
 
 def fase_circulo_naive():
     inicio = banner("circulo_naive")
@@ -349,31 +359,30 @@ def graficar_t90_vs_k(representantes):
     subprocess.run(comando, check=True)
 
 
+def t90_de(resumen, nombre):
+    """(media, desvio) del t90 real de una config en resumen.csv, o None si no
+    hay corridas que llegaran al 90%."""
+    valores = resumen.loc[(resumen["configuracion"] == nombre) & (resumen["t90"] >= 0), "t90"]
+    return (valores.mean(), valores.std()) if len(valores) else None
+
+
 def graficar_geometrias_quad(representantes):
-    import matplotlib.pyplot as plt
-
-    ks = sorted(representantes)
-    columnas = estilo.columnas_grilla(len(ks))
-    filas = -(-len(ks) // columnas)
-    fig, ejes = plt.subplots(filas, columnas,
-                              figsize=(5 * columnas, 5 * config.ANCHO / config.LARGO * filas))
-    ejes = [ejes] if len(ks) == 1 else list(ejes.flat)
-
+    """Barras horizontales de <t90> con el dibujo de cada ganador por K en
+    el eje y (barras_configs.py)."""
     resumen = pd.read_csv(config.RESULTADOS / "configs" / "resumen.csv")
     print("  geometrias quad (t90 real, no fitness del GA):")
-    for ax, k in zip(ejes, ks):
+    items = []
+    for k in sorted(representantes):
         nombre = f"ga_k{k}_s{representantes[k]}"
-        valores = resumen.loc[(resumen["configuracion"] == nombre) & (resumen["t90"] >= 0), "t90"]
-        titulo = f"K={k}"
-        if len(valores):
-            titulo += (f"   {estilo.t90_promedio(REALIZACIONES_STATS)} = "
-                       f"{valores.mean():.2f} ± {valores.std():.2f} s")
-            print(f"    K={k}: t90 = {estilo.formatear_valor(valores.mean(), valores.std(), 's')}")
-        diagrama_configs.dibujar_mesa(ax, diagrama_configs.leer_obstaculos(
-            config.CONFIGS / f"{nombre}.txt"), titulo=titulo)
-    for ax in ejes[len(ks):]:
-        ax.axis("off")
-    estilo.guardar(fig, ENTREGA_12 / "quad_geometrias.png")
+        t90 = t90_de(resumen, nombre)
+        if t90 is None:
+            continue
+        print(f"    K={k}: t90 = {estilo.formatear_valor(*t90, 's')}")
+        items.append({"etiqueta": f"K={k}", "media": t90[0], "desvio": t90[1],
+                      "obstaculos": diagrama_configs.leer_obstaculos(
+                          config.CONFIGS / f"{nombre}.txt")})
+    barras_configs.graficar(items, f"{estilo.t90_promedio(REALIZACIONES_STATS)} (s)",
+                            ENTREGA_12 / "quad_geometrias.png")
 
 
 def graficar_snapshots_quad(k, semilla):
@@ -558,8 +567,6 @@ def graficar_geometrias_pared(grano_ganador):
     no el final pulido, asi que son peores que pared_ganadora en general;
     la comparacion es para mostrar el efecto de la cantidad de puntos, no
     para elegir "la mejor de las 4" como resultado."""
-    import matplotlib.pyplot as plt
-
     nombres = []
     for perfil in PARED_PERFILES:
         origen = (config.RESULTADOS / "genetico" / "pared_hparams" /
@@ -579,29 +586,20 @@ def graficar_geometrias_pared(grano_ganador):
     run.barrido_configs(args_sim)
 
     resumen = pd.read_csv(config.RESULTADOS / "configs" / "resumen.csv")
-    n = len(nombres)
-    columnas = estilo.columnas_grilla(n)
-    filas = -(-n // columnas)
-    fig, ejes = plt.subplots(filas, columnas,
-                              figsize=(5 * columnas, 5 * config.ANCHO / config.LARGO * filas))
-    ejes = [ejes] if n == 1 else list(ejes.flat)
-
     print("  geometrias pared por cantidad de puntos de perfil (t90 real, grano fijo en el "
           "ganador):")
-    for ax, (perfil, nombre) in zip(ejes, nombres):
-        valores = resumen.loc[(resumen["configuracion"] == nombre) & (resumen["t90"] >= 0), "t90"]
-        titulo = f"perfil={perfil}"
-        if len(valores):
-            titulo += (f"   {estilo.t90_promedio(REALIZACIONES_STATS)} = "
-                       f"{valores.mean():.2f} ± {valores.std():.2f} s")
-            print(f"    perfil={perfil}: t90 = "
-                  f"{estilo.formatear_valor(valores.mean(), valores.std(), 's')}")
-        obstaculos = diagrama_configs.leer_obstaculos(config.CONFIGS / f"{nombre}.txt")
-        diagrama_configs.dibujar_mesa(ax, obstaculos, titulo=titulo)
-        perfil_pared.dibujar_perfil(ax, obstaculos, perfil)
-    for ax in ejes[n:]:
-        ax.axis("off")
-    estilo.guardar(fig, ENTREGA_12 / "pared_geometrias.png")
+    items = []
+    for perfil, nombre in nombres:
+        t90 = t90_de(resumen, nombre)
+        if t90 is None:
+            continue
+        print(f"    perfil={perfil}: t90 = {estilo.formatear_valor(*t90, 's')}")
+        items.append({"etiqueta": f"{perfil} puntos", "media": t90[0], "desvio": t90[1],
+                      "perfil": perfil,
+                      "obstaculos": diagrama_configs.leer_obstaculos(
+                          config.CONFIGS / f"{nombre}.txt")})
+    barras_configs.graficar(items, f"{estilo.t90_promedio(REALIZACIONES_STATS)} (s)",
+                            ENTREGA_12 / "pared_geometrias.png")
 
 
 def graficar_convergencia_pared(ruta_log):
@@ -615,22 +613,24 @@ def graficar_convergencia_pared(ruta_log):
 
 
 def graficar_snapshots_pared(ruta_poblacion, perfil):
-    etiqueta = "Pared ganadora"
     resumen = pd.read_csv(config.RESULTADOS / "configs" / "resumen.csv")
     valores = resumen.loc[(resumen["configuracion"] == "pared_ganadora") & (resumen["t90"] >= 0),
                           "t90"]
     gen, fitness = generacion_del_mejor(ruta_poblacion.parent / "log.csv")
+    # Letra grande: el <t90>_100 va debajo del panel para no alargar el titulo.
+    etiqueta = (f"Ganadora (gen {gen})\n"
+                f"{estilo.t90_promedio(estilo.SEMILLAS_GA)} = {fitness:.2f} s")
+    pie = []
     if len(valores):
-        etiqueta += (f"\n{estilo.t90_promedio(REALIZACIONES_STATS)} = "
-                     f"{valores.mean():.2f} ± {valores.std():.2f} s")
-    etiqueta += f"   {estilo.t90_promedio(estilo.SEMILLAS_GA)} = {fitness:.2f} s (gen {gen})"
+        pie = ["--config-final-pie", f"{estilo.t90_promedio(REALIZACIONES_STATS)} = "
+                                     f"{valores.mean():.2f} ± {valores.std():.2f} s"]
     generaciones = [str(g) for g in range(0, PARED_GENERACIONES_FINAL, 30)]
     subprocess.run([sys.executable, str(PLOT_DIR / "snapshots_poblacion.py"),
                     "--population-log", str(ruta_poblacion),
                     "--generaciones", *generaciones,
                     "--solo-mejor", "--titulo-panel", "completo",
                     "--config-final", str(config.CONFIGS / "pared_ganadora.txt"),
-                    "--config-final-etiqueta", etiqueta,
+                    "--config-final-etiqueta", etiqueta, *pie,
                     "--perfil-pared", str(perfil),
                     "--salida", str(ENTREGA_12 / "pared_snapshots.png")], check=True)
 
@@ -725,7 +725,7 @@ def graficar_comparacion_final():
 
     candidatos = {}
     if (resumen["configuracion"] == "vacia").any():
-        candidatos["vacia"] = "Mesa vacia"
+        candidatos["vacia"] = "Mesa vacía"
 
     mejor_circulo = None
     for ruta in sorted(config.CONFIGS.glob("circulo_r*.txt")):
@@ -734,7 +734,7 @@ def graficar_comparacion_final():
         if len(valores) and (mejor_circulo is None or valores.mean() < mejor_circulo[1]):
             mejor_circulo = (nombre, valores.mean())
     if mejor_circulo is not None:
-        candidatos[mejor_circulo[0]] = "Mejor circulo"
+        candidatos[mejor_circulo[0]] = "Mejor círculo"
 
     mejor_quad = None
     for ruta in sorted(config.CONFIGS.glob("ga_k*_s*.txt")):
@@ -755,14 +755,23 @@ def graficar_comparacion_final():
               "se saltea", file=sys.stderr)
         return
 
-    ruta_filtrada = filtrar_resumen(list(candidatos),
-                                     config.RESULTADOS / "comparacion_final_resumen.csv",
-                                     renombrar=candidatos)
-    comando = [sys.executable, str(PLOT_DIR / "t90_vs_configuracion.py"),
-               "--resumen", str(ruta_filtrada),
-               "--orden", *candidatos.values(),
-               "--salida", str(ENTREGA_12 / "comparacion_final.png")]
-    subprocess.run(comando, check=True)
+    # Barras horizontales con el dibujo de cada mesa en el eje y. La pared
+    # lleva su linea de perfil, con la cantidad de puntos ganadora.
+    perfil_ganador = None
+    if (config.RESULTADOS / "genetico" / "pared_hparams" / "resumen.csv").exists():
+        perfil_ganador = ganadores_pared()[1]
+    items = []
+    for nombre, etiqueta in candidatos.items():
+        media, desvio = t90_de(resumen, nombre)
+        ruta = config.CONFIGS / f"{nombre}.txt"
+        items.append({"etiqueta": etiqueta.replace(" (", "\n("), "media": media, "desvio": desvio,
+                      "obstaculos": diagrama_configs.leer_obstaculos(ruta) if ruta.exists() else [],
+                      "perfil": perfil_ganador if nombre == "pared_ganadora" else None})
+    # Sin nombres (el dibujo de la mesa alcanza) y con el valor escrito en
+    # cada barra, con 2 decimales: es la comparacion final.
+    barras_configs.graficar(items, f"{estilo.t90_promedio(REALIZACIONES_STATS)} (s)",
+                            ENTREGA_12 / "comparacion_final.png",
+                            etiquetas=False, decimales=2)
 
 
 # --------------------------------------------------------------------------

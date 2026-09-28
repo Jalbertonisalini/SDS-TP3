@@ -73,8 +73,8 @@
       \dgrp{2}{4}{Intro.}
       \dgrp{5}{7}{Impl.}
       \dgrp{8}{12}{Sim.}
-      \dgrp{13}{31}{Resultados}
-      \dgrp{32}{34}{Conc.}
+      \dgrp{13}{29}{Resultados}
+      \dgrp{30}{32}{Conc.}
     \end{tikzpicture}
   \end{beamercolorbox}
 }
@@ -101,6 +101,21 @@
 % Un \hfill comun (1fil) se reparte el sobrante a medias con ese rightskip y el
 % parametro queda a media asta; con 1filll gana y se pega al margen derecho.
 \newcommand{\libre}[1]{\hskip 0pt plus 1filll\relax{\small\normalfont\color{black}#1}}
+
+% Colores de los diagramas de codificacion (python/plot/diagrama_codificacion.py):
+% mismo gris de los obstaculos (config.COLOR_OBSTACULO, compuesto contra
+% blanco con su alpha) y el azul de matplotlib ("tab:blue") que marca los genes.
+\definecolor{obstaculo}{gray}{0.70}
+\definecolor{genblue}{HTML}{1F77B4}
+\definecolor{perfilgray}{gray}{0.3}
+
+% Swatches para la leyenda en LaTeX de las figuras de codificacion (que ya no
+% llevan leyenda embebida, ver diagrama_codificacion.py): un cuadrado (relleno
+% #1, borde #2, "none" si no hay) o un punto (color #1), para poner al lado
+% del texto de cada item.
+\newcommand{\swatchrect}[2]{\tikz[baseline=-0.45ex]\draw[fill=#1,
+  draw=#2, line width=0.8pt] (0,0) rectangle (0.38,0.24);}
+\newcommand{\swatchdot}[1]{\tikz[baseline=-0.4ex]\fill[#1] (0,0) circle (0.11);}
 
 % Figura unica, al maximo tamano posible.
 \newcommand{\figuno}[1]{%
@@ -131,6 +146,48 @@
       \end{minipage}%
     \hss}
   \end{center}
+}
+
+% Tres figuras lado a lado, cada una con su titulo arriba y su leyenda de
+% colores (armada con \swatchrect/\swatchdot) debajo. Las 3 imagenes salen
+% siempre del mismo tamano (diagrama_codificacion.py ya no les dibuja ninguna
+% leyenda adentro), asi que quedan alineadas sin nada especial aca.
+\newcommand{\figtres}[9]{% por columna: #1 titulo, #2 imagen, #3 leyenda (x3)
+  \begin{center}
+    \hbox to \textwidth{\hss
+      \begin{minipage}[t]{0.32\paperwidth}
+        \centering
+        {\large\bfseries #1}\par\vspace{0.3em}
+        \includegraphics[width=\linewidth,height=0.6\textheight,keepaspectratio]{#2}
+        \par\vspace{0.5em}{\small #3}
+      \end{minipage}%
+      \hspace{0.01\paperwidth}%
+      \begin{minipage}[t]{0.32\paperwidth}
+        \centering
+        {\large\bfseries #4}\par\vspace{0.3em}
+        \includegraphics[width=\linewidth,height=0.6\textheight,keepaspectratio]{#5}
+        \par\vspace{0.5em}{\small #6}
+      \end{minipage}%
+      \hspace{0.01\paperwidth}%
+      \begin{minipage}[t]{0.32\paperwidth}
+        \centering
+        {\large\bfseries #7}\par\vspace{0.3em}
+        \includegraphics[width=\linewidth,height=0.6\textheight,keepaspectratio]{#8}
+        \par\vspace{0.5em}{\small #9}
+      \end{minipage}%
+    \hss}
+  \end{center}
+}
+
+% Figura unica bien apaisada (barras de t90 con las mesas al costado, ver
+% barras_configs.py): usa casi todo el ancho de la PAGINA, no solo \textwidth,
+% centrada con \hss como \figdos. El frame va con [t] para que quede
+% justo debajo del titulo y aproveche todo el alto.
+\newcommand{\figancha}[1]{%
+  \par\vspace{0.4em}\noindent
+  \hbox to \textwidth{\hss
+    \includegraphics[width=0.96\paperwidth,height=0.86\textheight,keepaspectratio]{#1}%
+  \hss}
 }
 
 % Placeholder para figuras todavia no generadas: caja con la ruta esperada.
@@ -329,9 +386,12 @@
 \end{frame}
 
 \begin{frame}{Configuraciones estudiadas}
-  \begin{center}
-    Acá van imágenes.
-  \end{center}
+  \figtres{Círculo}{entrega/1.2/codificacion_circulo.png}
+          {}
+          {Quad}{entrega/1.2/codificacion_quad.png}
+          {\swatchrect{obstaculo}{genblue}~Gen $(x,y,R)$\\[0.3em]\swatchrect{obstaculo}{none}~Copia espejada}
+          {Pared}{entrega/1.2/codificacion_pared.png}
+          {\swatchdot{genblue}~Gen $(x)$\\[0.3em]\swatchdot{perfilgray}~Perfil interpolado}
 \end{frame}
 
 \begin{frame}{Algoritmo genético}
@@ -367,57 +427,51 @@
 \end{frame}
 
 % --- 1.2: circulo -> quad -> pared -> comparacion ---
+% En cada geometria: primero la animacion, despues su F_u(t) y recien
+% despues los graficos que resumen varias corridas.
 
-\begin{frame}{Círculo: codificación\libre{$R \in \{0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.34\}$ m}}
-  \figuno{entrega/1.2/codificacion_circulo.png}
+\begin{frame}{Círculo: mejor resultado}
+  \animuno{entrega/1.2/circulo_mejor_caso_frame.png}{https://youtu.be/TODO}
+\end{frame}
+
+\begin{frame}{Círculo: $F_u$ vs Tiempo}
+  \figuno{entrega/1.2/circulo_fu_vs_tiempo.png}
 \end{frame}
 
 \begin{frame}{$\langle t_{90} \rangle_{100}$ vs Radio del círculo}
   \figuno{entrega/1.2/circulo_t90_vs_radio.png}
 \end{frame}
 
-\begin{frame}{Círculo: mejor resultado}
-  \animuno{entrega/1.2/circulo_mejor_caso_frame.png}{https://youtu.be/TODO}
-\end{frame}
-
-\begin{frame}{Quad: codificación\libre{$K \in \{5, 9, 13, 17\}$, pobl.~48, 60 gen.}}
-  \figuno{entrega/1.2/codificacion_quad.png}
-\end{frame}
-
-\begin{frame}{Quad: geometrías propuestas por el GA}
-  \figuno{entrega/1.2/quad_geometrias.png}
-\end{frame}
-
-\begin{frame}{Quad: evolución del ganador\libre{$K = 9$}}
-  \figuno{entrega/1.2/quad_snapshots_k9.png}
-\end{frame}
-
 \begin{frame}{Quad: mejor resultado}
   \animuno{entrega/1.2/quad_k9_mejor_caso_frame.png}{https://youtu.be/TODO}
 \end{frame}
 
-\begin{frame}{Pared: codificación}
-  \figuno{entrega/1.2/codificacion_pared.png}
+\begin{frame}{Quad: $F_u$ vs Tiempo}
+  \figuno{entrega/1.2/quad_k9_fu_vs_tiempo.png}
 \end{frame}
 
-\begin{frame}{Pared: hiperparámetros\libre{Pobl.~40, 80 gen.}}
-  \figuno{entrega/1.2/pared_hparams.png}
-\end{frame}
-
-\begin{frame}{Pared: geometrías por puntos de perfil\libre{Grano 0.018 m, pobl.~40, 80 gen.}}
-  \figuno{entrega/1.2/pared_geometrias.png}
-\end{frame}
-
-\begin{frame}{Pared: evolución del ganador\libre{6 puntos, pobl.~64, 150 gen.}}
-  \figuno{entrega/1.2/pared_snapshots.png}
+\begin{frame}[t]{Quad: geometrías propuestas por el GA}
+  \figancha{entrega/1.2/quad_geometrias.png}
 \end{frame}
 
 \begin{frame}{Pared: mejor resultado}
   \animuno{entrega/1.2/pared_mejor_caso_frame.png}{https://youtu.be/TODO}
 \end{frame}
 
-\begin{frame}{Comparación final}
-  \figuno{entrega/1.2/comparacion_final.png}
+\begin{frame}{Pared: $F_u$ vs Tiempo}
+  \figuno{entrega/1.2/pared_fu_vs_tiempo.png}
+\end{frame}
+
+\begin{frame}[t]{Pared: geometrías por puntos de perfil\libre{Grano 0.018 m, pobl.~40, 80 gen.}}
+  \figancha{entrega/1.2/pared_geometrias.png}
+\end{frame}
+
+\begin{frame}[t]{Pared: evolución del ganador\libre{6 puntos, pobl.~64, 150 gen.}}
+  \figancha{entrega/1.2/pared_snapshots.png}
+\end{frame}
+
+\begin{frame}[t]{Comparación final}
+  \figancha{entrega/1.2/comparacion_final.png}
 \end{frame}
 
 \begin{frame}{DCM vs Tiempo}

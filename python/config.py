@@ -39,3 +39,10 @@ SEMILLA_BASE = 1000
 FUENTE = 20
 TAM_FIG = (13, 6)
 DPI = 150
+
+# Todos los obstaculos ("pelotitas") se dibujan con este mismo color y con
+# un poco de transparencia, para que contraste lo que se dibuja arriba (ejes
+# de simetria, flechas, marcadores de genes) en vez de tapar debajo de un
+# relleno solido.
+COLOR_OBSTACULO = "0.65"
+ALPHA_OBSTACULO = 0.85

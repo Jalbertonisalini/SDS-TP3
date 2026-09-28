@@ -67,7 +67,7 @@ def main():
 
     ax.axhline(config.FRACCION_OBJETIVO, linestyle="--", color="black", alpha=0.6)
     ax.set_xlabel("Tiempo (s)", fontsize=config.FUENTE)
-    ax.set_ylabel("Fraccion de particulas usadas", fontsize=config.FUENTE)
+    ax.set_ylabel("$F_u$", fontsize=config.FUENTE)
     ax.tick_params(labelsize=config.FUENTE)
     ax.legend(loc="best", fontsize=config.FUENTE)
     ax.grid(alpha=0.3)

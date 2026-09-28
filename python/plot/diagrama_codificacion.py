@@ -1,6 +1,10 @@
-"""Como arma el GA cada geometria a partir de sus genes (punto 1.2): los genes
-libres en azul, las copias por simetria en gris y los ejes de simetria
-punteados.
+"""Como arma el GA cada geometria a partir de sus genes (punto 1.2): todos los
+obstaculos en el mismo gris semitransparente, los genes libres marcados con
+un borde azul (o un marcador azul en el perfil de pared) y los ejes de
+simetria punteados. Sin leyenda embebida (bbox_inches="tight" la recorta con
+un tamano distinto por figura segun cuanto texto tenga, lo que rompe el
+alineado de las 3 en la diapositiva) -- la leyenda de colores va aparte, en
+LaTeX, debajo de cada figura.
 
     python plot/diagrama_codificacion.py --circulo 0.2 \
         --salida ../entrega/1.2/codificacion_circulo.png
@@ -25,8 +29,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.lines import Line2D
-from matplotlib.patches import Circle, Patch
+from matplotlib.patches import Circle
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -36,7 +39,6 @@ import perfil_pared
 from diagrama_configs import dibujar_mesa, leer_obstaculos
 
 GEN = "tab:blue"
-COPIA = "0.75"
 
 
 def ejes_de_simetria(ax):
@@ -48,11 +50,12 @@ def ejes_de_simetria(ax):
 def circulo(ax, radio):
     dibujar_mesa(ax, [])
     cx, cy = config.LARGO / 2, config.ANCHO / 2
-    ax.add_patch(Circle((cx, cy), radio, color=GEN, linewidth=0))
+    ax.add_patch(Circle((cx, cy), radio, color=config.COLOR_OBSTACULO,
+                        alpha=config.ALPHA_OBSTACULO, linewidth=0))
     ax.annotate("", xy=(cx + radio, cy), xytext=(cx, cy),
-                arrowprops=dict(arrowstyle="->", color="white", linewidth=2))
-    ax.plot(cx, cy, marker="o", markersize=5, color="white")
-    ax.text(cx + radio / 2, cy + 0.012, "R", ha="center", va="bottom", color="white",
+                arrowprops=dict(arrowstyle="->", color=GEN, linewidth=2))
+    ax.plot(cx, cy, marker="o", markersize=5, color=GEN)
+    ax.text(cx + radio / 2, cy + 0.012, "R", ha="center", va="bottom", color=GEN,
             fontsize=config.FUENTE, fontstyle="italic")
 
 
@@ -62,29 +65,22 @@ def quad(ax, obstaculos):
     for x, y, r in obstaculos:
         centro = abs(x - config.LARGO / 2) < eps and abs(y - config.ANCHO / 2) < eps
         libre = centro or (x < config.LARGO / 2 and y < config.ANCHO / 2)
-        ax.add_patch(Circle((x, y), r, color=GEN if libre else COPIA, linewidth=0))
+        borde = dict(edgecolor=GEN, linewidth=2.5) if libre else dict(linewidth=0)
+        ax.add_patch(Circle((x, y), r, facecolor=config.COLOR_OBSTACULO,
+                            alpha=config.ALPHA_OBSTACULO, **borde))
     ejes_de_simetria(ax)
-    ax.legend(handles=[Patch(color=GEN, label="Gen (x, y, R)"),
-                       Patch(color=COPIA, label="Copia espejada")],
-              loc="upper center", bbox_to_anchor=(0.5, -0.02), ncol=2, frameon=False,
-              fontsize=config.FUENTE * 0.6)
 
 
 def pared(ax, obstaculos, n):
     dibujar_mesa(ax, [])
     for x, y, r in obstaculos:
-        ax.add_patch(Circle((x, y), r, color=COPIA, linewidth=0))
+        ax.add_patch(Circle((x, y), r, color=config.COLOR_OBSTACULO,
+                            alpha=config.ALPHA_OBSTACULO, linewidth=0))
     genes = perfil_pared.dibujar_perfil(ax, obstaculos, n, color="0.3")
     ys = np.linspace(0, config.ANCHO / 2, n)
     ax.plot(genes, ys, linestyle="none", marker="o", markersize=9, color=GEN,
             markeredgecolor="white", markeredgewidth=1, zorder=6)
     ejes_de_simetria(ax)
-    ax.legend(handles=[Line2D([], [], linestyle="none", marker="o", markersize=9, color=GEN,
-                              label="Gen (profundidad)"),
-                       Line2D([], [], linestyle="--", marker="o", color="0.3",
-                              label="Perfil interpolado")],
-              loc="upper center", bbox_to_anchor=(0.5, -0.02), ncol=2, frameon=False,
-              fontsize=config.FUENTE * 0.6)
 
 
 def main():

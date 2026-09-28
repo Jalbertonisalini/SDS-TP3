@@ -41,6 +41,10 @@ import estilo
 import perfil_pared
 from convergencia_poblacion import leer_poblacion, dibujar_mesa
 
+# Titulos de panel grandes: la grilla va a toda la diapositiva y tienen que
+# leerse de lejos.
+TAM_TITULO = config.FUENTE * 0.9
+
 
 def leer_obstaculos(ruta):
     obstaculos = []
@@ -79,6 +83,9 @@ def main():
     parser.add_argument("--config-final-etiqueta", default="Ganador final",
                         help="Texto del ultimo panel cuando se pasa --config-final "
                              "(default: 'Ganador final')")
+    parser.add_argument("--config-final-pie", default=None,
+                        help="Texto debajo del ultimo panel cuando se pasa --config-final "
+                             "(ej. su <t90>_100), para no alargar el titulo")
     parser.add_argument("--titulo-panel", choices=["completo", "minimo", "ninguno"],
                         default="completo",
                         help="completo: 'Generacion N  <t90>_5 = X s' (default). "
@@ -112,7 +119,8 @@ def main():
     # docstring del modulo).
     paneles = [("generacion", g) for g in generaciones]
     if args.config_final is not None and args.solo_mejor:
-        paneles[-1] = ("final", leer_obstaculos(args.config_final), args.config_final_etiqueta)
+        paneles[-1] = ("final", leer_obstaculos(args.config_final), args.config_final_etiqueta,
+                       args.config_final_pie)
 
     norm = Normalize(vmin=datos["fitness"].min(), vmax=datos["fitness"].max())
     cmap = plt.get_cmap("viridis_r")  # menor fitness (mejor) = mas claro
@@ -121,19 +129,23 @@ def main():
     columnas = args.columnas or estilo.columnas_grilla(n)
     filas = math.ceil(n / columnas)
     fig, ejes = plt.subplots(filas, columnas,
-                             figsize=(5 * columnas, 5 * config.ANCHO / config.LARGO * filas))
+                             figsize=(4 * columnas,
+                                      (4 * config.ANCHO / config.LARGO + 1.3) * filas))
     ejes = [ejes] if n == 1 else ejes.flatten()
 
     for ax, panel in zip(ejes, paneles):
         dibujar_mesa(ax)
         if panel[0] == "final":
-            _, obstaculos, etiqueta = panel
+            _, obstaculos, etiqueta, pie = panel
             for x, y, radio in obstaculos:
-                ax.add_patch(Circle((x, y), radio, color="0.4", linewidth=0))
+                ax.add_patch(Circle((x, y), radio, color=config.COLOR_OBSTACULO,
+                                    alpha=config.ALPHA_OBSTACULO, linewidth=0))
             if args.perfil_pared:
                 perfil_pared.dibujar_perfil(ax, obstaculos, args.perfil_pared)
             if args.titulo_panel != "ninguno":
-                ax.set_title(etiqueta, fontsize=config.FUENTE * 0.6)
+                ax.set_title(etiqueta, fontsize=TAM_TITULO)
+                if pie:
+                    ax.set_xlabel(pie, fontsize=TAM_TITULO)
             continue
 
         generacion = panel[1]
@@ -144,7 +156,8 @@ def main():
             # Solido, no degrade: es un unico individuo, no una poblacion
             # para comparar por fitness.
             for _, fila in individuo.iterrows():
-                ax.add_patch(Circle((fila["x"], fila["y"]), fila["r"], color="0.4", linewidth=0))
+                ax.add_patch(Circle((fila["x"], fila["y"]), fila["r"], color=config.COLOR_OBSTACULO,
+                                    alpha=config.ALPHA_OBSTACULO, linewidth=0))
             if args.perfil_pared:
                 perfil_pared.dibujar_perfil(ax, individuo[["x", "y", "r"]].to_numpy(),
                                             args.perfil_pared)
@@ -156,17 +169,17 @@ def main():
                                         linewidth=0))
         mejor = cuadro["fitness"].min()
         if args.titulo_panel == "completo":
-            ax.set_title(f"Generacion {generacion}    "
+            ax.set_title(f"Generación {generacion}\n"
                          f"{estilo.t90_promedio(estilo.SEMILLAS_GA)} = {mejor:.2f} s",
-                        fontsize=config.FUENTE * 0.6)
+                         fontsize=TAM_TITULO)
         elif args.titulo_panel == "minimo":
-            ax.set_title(f"Generacion {generacion}", fontsize=config.FUENTE * 0.6)
+            ax.set_title(f"Generación {generacion}", fontsize=TAM_TITULO)
     for ax in ejes[n:]:
         ax.axis("off")
 
-    fig.tight_layout()
+    fig.tight_layout(h_pad=0.8, w_pad=0.8)
     args.salida.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(args.salida, dpi=config.DPI)
+    fig.savefig(args.salida, dpi=config.DPI, bbox_inches="tight")
     print(f"Figura guardada en {args.salida}")
     return 0
 
