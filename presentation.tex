@@ -292,53 +292,18 @@
         \item $L = 1.20$ m
         \item $W = 0.68$ m
         \item $d = 0.20$ m
-        \item $r = 0.0175$ m
-        \item $m = 0.025$ kg
+        \item $r = 0.0175$ m (partícula)
+        \item $m = 0.025$ kg (partícula)
         \item $v_0 = 1$ m/s
         \item $K \ge 0$ obstáculos
         \item $N = 100$ partículas
+        \item $R_k \ge r$
       \end{itemize}
 
-    % --- Columna del Diagrama ampliado ---
+    % --- Columna del Diagrama (Imagen) ---
     \column{0.68\textwidth}
       \centering
-      % Escala aumentada a 6.2cm para ocupar el ancho disponible
-      \begin{tikzpicture}[x=6.4cm, y=6.4cm, >=stealth]
-        % Mesa
-        \fill[black!6] (0,0) rectangle (1.2,0.68);
-        \draw[thick] (0,0) rectangle (1.2,0.68);
-
-        % Arcos (apertura d de 0.20m centrada verticalmente: 0.24 a 0.44)
-        \draw[red!70!black, line width=2.4pt]
-          (0,0.24) -- (0,0.44)
-          (1.2,0.24) -- (1.2,0.44);
-
-        % Obstáculos fijos (K)
-        \fill[black!65]
-          (0.55,0.15) circle(0.05)
-          (0.55,0.53) circle(0.05)
-          (0.80,0.34) circle(0.05);
-
-        % Partículas activas con vector de velocidad
-        \foreach \x/\y/\ang in {
-          0.10/0.08/60, 0.18/0.58/150, 0.32/0.42/210, 
-          0.40/0.15/20, 0.26/0.26/300, 0.66/0.12/140, 
-          0.76/0.50/200, 0.98/0.34/10, 0.05/0.34/80
-        }{
-          \fill[blue!70!black] (\x,\y) circle(2.2pt);
-          \draw[->, blue!70!black, thick] (\x,\y) -- ++(\ang:0.065);
-        }
-
-        % --- Cotas y Referencias (L, W, d) ---
-        % Cota de longitud L (abajo)
-        \draw[|<->|, thin, black!80] (0,-0.06) -- node[below, font=\footnotesize] {$L$} (1.2,-0.06);
-
-        % Cota de ancho W (derecha)
-        \draw[|<->|, thin, black!80] (1.26,0) -- node[right, font=\footnotesize] {$W$} (1.26,0.68);
-
-        % Cota del arco d (izquierda, señalando la apertura)
-        \draw[|<->|, thin, red!70!black] (-0.05,0.24) -- node[left, font=\footnotesize] {$d$} (-0.05,0.44);
-      \end{tikzpicture}
+      \includegraphics[width=\linewidth, height=0.75\textheight, keepaspectratio]{entrega/diagrama_sim/diagrama_sim.png}
   \end{columns}
 \end{frame}
 
@@ -475,7 +440,6 @@
   \begin{itemize}
     \setlength{\itemsep}{1em}
     \item El tiempo de ejecución crece exponencialmente con la cantidad de partículas. % TODO
-    \item % TODO
     \item A menor $\langle D \rangle$, menor $\langle t_{90} \rangle$.
   \end{itemize}
 \end{frame}
