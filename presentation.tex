@@ -354,7 +354,7 @@
         \item $v_0 = 1$ m/s
         \item $K \ge 0$ obstáculos
         \item $N = 100$ partículas
-        \item $R_k \ge r$
+        \item $R_k > r$
       \end{itemize}
 
     % --- Columna del Diagrama (Imagen) ---
@@ -419,10 +419,10 @@
 \section{Resultados}
 
 \begin{frame}{Animaciones}
-   \animuno{entrega/1.2/vacia_referencia_frame.png}{https://youtu.be/TODO}
+   \animuno{entrega/1.2/vacia_referencia_frame.png}{https://youtu.be/58gxH3OkXg8}
 \end{frame}
 
-\begin{frame}{Tiempo de ejecución vs Cantidad de partículas\libre{Mesa vacía, $t_f = 30$ s}}
+\begin{frame}{Tiempo de ejecución vs Cantidad de partículas\libre{$t_{max} = 30$ s}}
   \figuno{entrega/1.1/tiempo_ejecucion_vs_n_hex_logy.png}
 \end{frame}
 
@@ -430,8 +430,8 @@
 % En cada geometria: primero la animacion, despues su F_u(t) y recien
 % despues los graficos que resumen varias corridas.
 
-\begin{frame}{Círculo: mejor resultado}
-  \animuno{entrega/1.2/circulo_mejor_caso_frame.png}{https://youtu.be/TODO}
+\begin{frame}{Círculo: Animación}
+  \animuno{entrega/1.2/circulo_mejor_caso_frame.png}{https://youtu.be/80-24Scy7a0 }
 \end{frame}
 
 \begin{frame}{Círculo: $F_u$ vs Tiempo}
@@ -442,8 +442,8 @@
   \figuno{entrega/1.2/circulo_t90_vs_radio.png}
 \end{frame}
 
-\begin{frame}{Quad: mejor resultado}
-  \animuno{entrega/1.2/quad_k9_mejor_caso_frame.png}{https://youtu.be/TODO}
+\begin{frame}{Quad: Animación}
+  \animuno{entrega/1.2/quad_k9_mejor_caso_frame.png}{https://youtu.be/6ezWCVVRskk }
 \end{frame}
 
 \begin{frame}{Quad: $F_u$ vs Tiempo}
@@ -454,8 +454,8 @@
   \figancha{entrega/1.2/quad_geometrias.png}
 \end{frame}
 
-\begin{frame}{Pared: mejor resultado}
-  \animuno{entrega/1.2/pared_mejor_caso_frame.png}{https://youtu.be/TODO}
+\begin{frame}{Pared: Animación}
+  \animuno{entrega/1.2/pared_mejor_caso_frame.png}{https://youtu.be/0Ycg3fBMnCU }
 \end{frame}
 
 \begin{frame}{Pared: $F_u$ vs Tiempo}
@@ -478,8 +478,8 @@
   \figuno{entrega/1.3/dcm_difusion.png}
 \end{frame}
 
-\begin{frame}{$\langle D \rangle$ vs $\langle t_{90} \rangle_{100}$}
-  \figuno{entrega/1.3/t90_vs_difusion.png}
+\begin{frame}{$D$ vs $\langle t_{90} \rangle_{100}$}
+  \figuno{entrega/1.3/t90_vs_difusion_s1000.png}
 \end{frame}
 
 \begin{frame}{Competencia: configuración elegida\libre{Mejor pared, $\langle t_{90} \rangle_{100} = 13.57 \pm 1.42$ s}}
@@ -493,8 +493,8 @@
 \begin{frame}{Conclusiones}
   \begin{itemize}
     \setlength{\itemsep}{1em}
-    \item El tiempo de ejecución crece exponencialmente con la cantidad de partículas. % TODO
-    \item A menor $\langle D \rangle$, menor $\langle t_{90} \rangle$.
+    \item El tiempo de ejecución crece exponencialmente con la cantidad de partículas.
+    \item Existe una correlación positiva entre $D$ y $\langle t_{90} \rangle$.
   \end{itemize}
 \end{frame}
 
