@@ -21,6 +21,9 @@ echo "== 1.1 =="
 
 echo "== 1.2 =="
 "$PY" plot/t90_vs_configuracion.py --salida "$ENTREGA/1.2/t90_vs_configuracion.png"
+# Configuracion elegida para la competencia (diapositiva final de resultados).
+"$PY" plot/diagrama_configs.py --config ../configs/pared_ganadora.txt "" --dpi 400 \
+  --perfil-pared 6 --salida "$ENTREGA/1.2/pared_ganadora.png"
 
 echo "== 1.3 =="
 # DCM y D de cada configuracion, y <t90> vs D. La ventana de ajuste vive en

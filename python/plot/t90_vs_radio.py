@@ -67,7 +67,7 @@ def main():
                 marker="o", capsize=4, linestyle="-")
     conteos = agrupado["count"].unique()
     realizaciones = int(conteos[0]) if len(conteos) == 1 else None
-    estilo.etiquetar_ejes(ax, "Radio del obstaculo (m)",
+    estilo.etiquetar_ejes(ax, "Radio (m)",
                           f"{estilo.t90_promedio(realizaciones)} (s)")
     estilo.guardar(fig, args.salida)
 

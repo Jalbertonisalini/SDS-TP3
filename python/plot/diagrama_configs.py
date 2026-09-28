@@ -20,8 +20,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
+import perfil_pared
 
 
 def leer_obstaculos(ruta):
@@ -63,6 +65,12 @@ def main():
     parser.add_argument("--salida", type=Path, required=True, help="Archivo PNG de salida")
     parser.add_argument("--columnas", type=int, default=None,
                         help="Columnas de la grilla (default: automatico)")
+    parser.add_argument("--dpi", type=int, default=config.DPI,
+                        help="Resolucion del PNG (default: config.DPI); mas alto para "
+                             "una figura que va sola a toda la diapositiva")
+    parser.add_argument("--perfil-pared", type=int, default=None, metavar="N",
+                        help="Dibuja la linea de perfil de pared con N puntos de "
+                             "control sobre cada config (como en barras_configs.py)")
     args = parser.parse_args()
 
     n = len(args.config)
@@ -73,13 +81,16 @@ def main():
     ejes = [ejes] if n == 1 else ejes.flatten()
 
     for ax, (ruta, etiqueta) in zip(ejes, args.config):
-        dibujar_mesa(ax, leer_obstaculos(ruta), etiqueta)
+        obstaculos = leer_obstaculos(ruta)
+        dibujar_mesa(ax, obstaculos, etiqueta)
+        if args.perfil_pared:
+            perfil_pared.dibujar_perfil(ax, obstaculos, args.perfil_pared)
     for ax in ejes[n:]:
         ax.axis("off")
 
     fig.tight_layout()
     args.salida.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(args.salida, dpi=config.DPI)
+    fig.savefig(args.salida, dpi=args.dpi)
     print(f"Figura guardada en {args.salida}")
     return 0
 
