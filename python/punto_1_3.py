@@ -300,7 +300,7 @@ def graficar_dcm_difusion(tabla):
         pendiente = fila.D_m2_s * 2.0 * DIMENSION
         ax.plot(ventana["Time"], pendiente * ventana["Time"], linestyle="--",
                 linewidth=2.5, color=color,
-                label=f"D = {fila.D_m2_s:#.2g} m$^2$/s")
+                label=f"D = {estilo.notacion_cientifica_texto(fila.D_m2_s)} m$^2$/s")
     ax.legend(loc="upper left", ncol=2, fontsize=config.FUENTE * 0.7)
     estilo.etiquetar_ejes(ax, "Tiempo (s)", "DCM (m$^2$)")
     estilo.guardar(fig, DIRECTORIO_ENTREGA / "dcm_difusion.png")

@@ -49,7 +49,7 @@ def dibujar_dcm(ax, datos, tiempos_ajuste, pendiente, etiqueta="DCM simulado"):
     difusion = pendiente / (2.0 * DIMENSION)
     ax.plot(datos["Time"], datos["DCM"], label=etiqueta)
     ax.plot(tiempos_ajuste, pendiente * tiempos_ajuste, linestyle="--", linewidth=2.5,
-            label=f"Ajuste: D = {difusion:#.2g} m$^2$/s")
+            label=f"Ajuste: D = {estilo.notacion_cientifica_texto(difusion)} m$^2$/s")
     estilo.etiquetar_ejes(ax, "Tiempo (s)", "DCM (m$^2$)")
 
 

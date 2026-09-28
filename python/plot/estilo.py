@@ -136,6 +136,20 @@ def t90_promedio(realizaciones=None):
 SEMILLAS_GA = 5  # --seeds-per-gen con el que corrieron todos los GA del punto 1.2
 
 
+def notacion_cientifica_texto(valor, cifras=2):
+    """"1.2 x 10^-3" en mathtext, con `cifras` cifras significativas, para
+    leyendas y textos (el equivalente de notacion_cientifica para ejes)."""
+    if valor == 0:
+        return "0"
+    exponente = math.floor(math.log10(abs(valor)))
+    mantisa = valor / 10 ** exponente
+    # El redondeo puede llevar la mantisa a 10 (ej. 9.96 -> 10): pasar a la potencia siguiente.
+    if round(abs(mantisa), cifras - 1) >= 10:
+        exponente += 1
+        mantisa = valor / 10 ** exponente
+    return rf"{mantisa:.{cifras - 1}f} $\times$ 10$^{{{exponente}}}$"
+
+
 def formatear_valor(media, desvio=None, unidad=""):
     """"13.5 ± 0.8 s": media y desvio redondeados a las cifras
     significativas que marca el desvio, con la unidad al final si se pasa."""
